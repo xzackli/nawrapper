@@ -35,44 +35,4 @@ def debug_plot(m1, m2, xval=3000, yval=700, xr=50, yr=50, xoff=0, yoff=0, apo=No
     plt.tight_layout();
     return axes
     
-    
-def get_steve_apo_from_pixbox(shape, wcs, width, N_cut=0):
-    from pixell import enmap
-    
-    apo = enmap.ones(shape, wcs=wcs)
-    apo_i= np.arange(width)
-    apo_profile = 1-(-np.sin(2.0*np.pi*(width-apo_i)/(width-N_cut))/(2.0*np.pi)
-                     + (width-apo_i)/(width-N_cut))
-    
-    # set it up for x and y edges
-    apo[:width,:] *= apo_profile[:, np.newaxis]
-    apo[:,:width] *= apo_profile[np.newaxis, :]
-    apo[-width:,:] *= apo_profile[::-1, np.newaxis]
-    apo[:,-width:] *= apo_profile[np.newaxis, ::-1]
-    return apo
 
-def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
-    from pixell import enmap
-    import numpy as np
-    
-    alm = enmap.fft(m * apo, normalize=True)
-    
-    if unpixwin: # remove pixel window in Fourier space
-        wy = np.sinc(np.fft.fftfreq(alm.shape[-2]))
-        wx = np.sinc(np.fft.fftfreq(alm.shape[-1]))
-        alm /= (wy[:,np.newaxis])
-        alm /= (wx[np.newaxis,:])
-
-    ly, lx = enmap.lmap(alm.shape, alm.wcs)
-    kfilter_x = (np.abs(lx) > kx_cut)
-    kfilter_y = (np.abs(ly) > ky_cut)
-
-    if legacy_steve: # Steve's kspace filter appears to do this
-        cut_x_k = np.unique(lx[(np.abs(lx) <= kx_cut )])
-        cut_y_k = np.unique(ly[(np.abs(ly) <= ky_cut )])
-        kfilter_x[ np.isclose(lx, cut_x_k[0]) ] = True # keep most positive x
-        kfilter_y[ np.isclose(ly, cut_y_k[-1]) ] = True # keep most negative y
-
-    result = enmap.ifft(alm * kfilter_x * kfilter_y, normalize=True).real
-    result[apo > 0.0] = result[apo > 0.0] / apo[apo > 0.0]
-    return result
