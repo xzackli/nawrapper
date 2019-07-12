@@ -48,6 +48,7 @@ def get_steve_apo(shape, wcs, width, N_cut=0):
     return apo
 
 def get_bins_from_file(file, lmax=7925, is_Dell=True):
+    """Read bins from an ASCII file and create a NmtBin object."""
     binleft, binright, bincenter = np.loadtxt( 
         file, unpack=True, 
         dtype={'names': ('binleft', 'binright', 'bincenter'),
@@ -63,9 +64,14 @@ def get_bins_from_file(file, lmax=7925, is_Dell=True):
     return b
 
 def get_cross_spectra(namap_list, bins, mc=None):
+    """Loop over all pairs and compute spectra.
+    
+    If mc is None, a new mode coupling matrix will be generated 
+    for each pair. If mc is a nawrapper.mode_coupling object, then
+    that mode coupling matrix is used for all the spectra.
+    """
     ps_dict = {}
     cross_spectra = []
-
     
     # we can reuse the workspace w0 from earlier
     for i in range(len(namap_list)):
@@ -166,6 +172,7 @@ class namap:
 
         
 class mode_coupling:
+    """Wrapper around the NaMaster workspace object."""
     
     def __init__(self, namap1, namap2, bins):
         cl_coupled = nmt.compute_coupled_cell(namap1.field, namap2.field)
