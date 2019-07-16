@@ -3,7 +3,7 @@ import pymaster as nmt
 import numpy as np
 import matplotlib.pyplot as plt
 from pixell import enmap, enplot
-
+import scipy
 
 def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
     """Apply k-space filter on a map."""
@@ -89,6 +89,32 @@ def get_cross_spectra(namap_list, bins, mc=None):
 
     return ps_dict, cross_spectra
 
+
+# adapted from PSpipe
+def get_distance(input_mask):
+    pixSize_arcmin= np.sqrt(input_mask.pixsize()*(60*180/np.pi)**2)
+    dist = scipy.ndimage.distance_transform_edt( np.asarray(input_mask) )
+    dist *= pixSize_arcmin/60
+    return dist
+
+def apod_C2(input_mask,radius):
+    """
+    @brief C2 apodisation as defined in https://arxiv.org/pdf/0903.2350.pdf
+    
+    input_mask: enmap.ndmap with values \geq 0
+    radius: apodization radius in degrees
+    """
+    
+    if radius==0:
+        return input_mask
+    else:
+        dist=get_distance(input_mask)
+        id=np.where(dist > radius)
+        win=dist/radius-np.sin(2*np.pi*dist/radius)/(2*np.pi)
+        win[id]=1
+        
+    return( enmap.ndmap(win, input_mask.wcs) )
+
 class namap:
     
     def __init__(self, shape, wcs, 
@@ -149,7 +175,8 @@ class namap:
             beam_t = np.loadtxt(beam_file)
             lmax_beam = abs(int(180.0/np.min(wcs.wcs.cdelt))) + 1
             beam_data = np.zeros(lmax_beam)
-            beam_data[:beam_t.shape[0]] = beam_t[:,1].astype(float)
+            
+            beam_data = np.interp(x=np.arange(lmax_beam), xp=beam_t[:,0], fp=beam_t[:,1], right=0.0)
             
         # needed to reproduce steve's spectra
         if legacy_steve:
@@ -157,7 +184,7 @@ class namap:
             
         self.beam_data = beam_data
         # extract to common shape and wcs
-        self.map_data = enmap.extract(map_data, shape, wcs)
+        self.map_data = enmap.extract(map_data, shape, wcs)[0] # T ONLY
         self.mask_data = enmap.extract(mask_data, shape, wcs)
         
         if (kx > 0) or (ky > 0):
