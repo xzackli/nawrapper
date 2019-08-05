@@ -13,7 +13,7 @@ module load anaconda3
 
 Either enter your preferred conda environment with `source activate YOUR_ENV_NAME` if you already have one, or create a new one. I call my power spectrum conda environment `ps`, but you can name it something else if you want, just replace every mention of `ps` in the instructions below with your desired environment name.
 
-bash
+```bash
 conda create -n ps python=3
 ```
 
