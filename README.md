@@ -43,10 +43,9 @@ Next, install NaMaster with
 conda install -c conda-forge namaster -n ps
 ```
 
-You must also install pixell if you do not have it.
+You must also install pixell if you do not have it. If you are on niagara, you will need to `module load autotools` to get autoconf first.
 
 ```bash
-module load autotools
 git clone git@github.com:simonsobs/pixell.git
 cd pixell
 python setup.py install --user
