@@ -2,6 +2,8 @@
 
 `nawrapper` is a thin wrapper around [NaMaster](https://github.com/LSSTDESC/NaMaster) for CMB work, particularly for the ACT experiment. The intention is to hide some of NaMaster's generality for conciseness and simplicity.
 
+Read the [documentation(http://physics.princeton.edu/~zequnl/nawrapper/docs/build/html/index.html)!
+
 ## Installation
 This guide is intended for people who are not currently using Anaconda on Niagara. If you already have a conda environment on Niagara which works with Jupyter, skip to the next section titled "Installing the Power Spectrum Software".
 
@@ -23,7 +25,7 @@ Enter your environment. This is what you will type every time you want to comput
 conda activate ps
 ```
 
-You will need to install some other necessary packages into your conda environment, if you just created it. Note that we are using `-n` to specify the conda environment! 
+You will need to install some other necessary packages into your conda environment, if you just created it. Note that we are using `-n` to specify the conda environment!
 
 ```bash
 conda install -n ps matplotlib ipykernel cython
@@ -36,7 +38,7 @@ python -m ipykernel install --user --name ps --display-name "Python 3 (ps)"
 
 ### Installing the Power Spectrum Software
 
-Next, install NaMaster with 
+Next, install NaMaster with
 ```bash
 conda install -c conda-forge namaster -n ps
 ```
