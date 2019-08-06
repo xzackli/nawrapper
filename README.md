@@ -20,13 +20,13 @@ conda create -n ps python=3
 
 Enter your environment. This is what you will type every time you want to compute some spectra (and in your SLURM power spectrum jobs!).
 ```bash
-source activate ps
+conda activate ps
 ```
 
 You will need to install some other necessary packages into your conda environment, if you just created it. Note that we are using `-n` to specify the conda environment! 
 
 ```bash
-conda install -n ps matplotlib ipykernel
+conda install -n ps matplotlib ipykernel cython
 ```
 
 If you are running on a machine with Jupyter like cori or niagara, we also set up ipykernel so your conda environment shows up in Jupyter. You can do this on tiger too, but it's less convenient (see [Jupyter on the Cluster](https://oncomputingwell.princeton.edu/2018/05/jupyter-on-the-cluster/)).
