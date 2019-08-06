@@ -49,14 +49,13 @@ def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
     alm = enmap.fft(m * apo, normalize=True)
 
     if unpixwin: # remove pixel window in Fourier space
-        wy = np.sinc(np.fft.fftfreq(alm.shape[-2]))
-        wx = np.sinc(np.fft.fftfreq(alm.shape[-1]))
+        wy, wx = enmap.calc_window(m.shape)
         alm /= (wy[:,np.newaxis])
         alm /= (wx[np.newaxis,:])
 
     ly, lx = enmap.lmap(alm.shape, alm.wcs)
-    kfilter_x = (np.abs(lx) > kx_cut)
-    kfilter_y = (np.abs(ly) > ky_cut)
+    kfilter_x = (np.abs(lx) >= kx_cut)
+    kfilter_y = (np.abs(ly) >= ky_cut)
 
     if legacy_steve: # Steve's kspace filter appears to do this
         cut_x_k = np.unique(lx[(np.abs(lx) <= kx_cut )])
@@ -234,34 +233,6 @@ def read_beam(beam_file, wcs=None):
     return beam_data
 
 
-# NEED TO UPDATE
-# def get_cross_spectra(namap_list, bins, mc=None):
-#     """Loop over all pairs and compute spectra.
-#
-#     If mc is None, a new mode coupling matrix will be generated
-#     for each pair. If mc is a nawrapper.mode_coupling object, then
-#     that mode coupling matrix is used for all the spectra.
-#     """
-#     ps_dict = {}
-#     cross_spectra = []
-#
-#     # we can reuse the workspace w0 from earlier
-#     for i in range(len(namap_list)):
-#         for j in range(len(namap_list)):
-#             if i >= j:
-#                 if mc is None:
-#                     mc_temp = nw.mode_coupling(
-#                         namap_list[i], namap_list[j], bins)
-#                     Cb = mc_temp.Cb
-#                 else:
-#                     Cb = mc.get_Cb(namap_list[i], namap_list[j])
-#                 ps_dict[f"{i},{j}"] = Cb
-#                 if i > j:
-#                     cross_spectra += [Cb[0]]
-#
-#     return ps_dict, cross_spectra
-
-
 def compute_spectra(namap1, namap2, bins=None, mc=None):
     """Compute all of the spectra between two maps.
 
@@ -347,6 +318,10 @@ class namap:
                  kx=0, ky=0, kspace_apo=40, unpixwin=True,
                 legacy_steve=False):
         """Create a new namap.
+        
+        This multiplies the apodized k-space taper into your mask. In 
+        general, your mask should already have the edges tapered, so this
+        will not change your results significantly.
 
         Parameters
         ----------
@@ -413,6 +388,8 @@ class namap:
         # k-space filter step (also correct for pixel window here!)
         apo = get_steve_apo(self.shape, self.wcs,
                                          kspace_apo)
+        mask *= apo # multiply the apodized taper into your mask
+        
         self.map_I = nw.kfilter_map(
             self.map_I, apo, kx, ky, unpixwin=unpixwin,
                 legacy_steve=legacy_steve)
@@ -505,7 +482,3 @@ class mode_coupling:
         cl_coupled = nmt.compute_coupled_cell(f_a, f_b)
         cl_decoupled = wsp.decouple_cell(cl_coupled)
         return cl_decoupled
-
-#     def get_Cb(self, namap1, namap2):
-#         cl_coupled = nmt.compute_coupled_cell(namap1.field, namap2.field)
-#         return self.w0.decouple_cell(cl_coupled)
