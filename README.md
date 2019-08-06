@@ -28,7 +28,7 @@ conda activate ps
 You will need to install some other necessary packages into your conda environment, if you just created it. Note that we are using `-n` to specify the conda environment!
 
 ```bash
-conda install -n ps matplotlib ipykernel cython
+conda install -n ps matplotlib ipykernel cython numpy scipy astropy pillow
 ```
 
 If you are running on a machine with Jupyter like cori or niagara, we also set up ipykernel so your conda environment shows up in Jupyter. You can do this on tiger too, but it's less convenient (see [Jupyter on the Cluster](https://oncomputingwell.princeton.edu/2018/05/jupyter-on-the-cluster/)).
