@@ -87,6 +87,16 @@ the directory where you keep your software, and then run
 
 You should be all set! Try out the :ref:`quickstart`.
 
+
+
+Updating NaWrapper
+~~~~~~~~~~~~~~~~~~
+To get new version of NaWrapper in the future, you'll have to run `git pull` in
+the `nawrapper` repository you had cloned earlier. Since you installed with `-e`
+using pip, this is all you have to do.
+
+
+
 .. _NaMaster: https://github.com/LSSTDESC/NaMaster
 .. _documentation: http://physics.princeton.edu/~zequnl/nawrapper/docs/build/html/index.html
 .. _Jupyter on the Cluster: https://oncomputingwell.princeton.edu/2018/05/jupyter-on-the-cluster/
