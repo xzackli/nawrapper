@@ -3,13 +3,24 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to NaWrapper's documentation!
-=====================================
+NaWrapper
+=========
+
+`NaWrapper`_ is a thin wrapper around `NaMaster`_ for CMB work in rectangular
+pixelization, in particular for the ACT experiment.
+
+.. figure:: _static/outline.svg
+
+It bundles all the necessary pieces associated with a map (i.e. beams, masks,
+filters) into a :py:class:`nawrapper.ps.namap` object, and provides concise
+utility functions for turning these into dictionaries of power spectra.
+
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
+   usage/installation
+   usage/quickstart
 
 
 Indices and tables
@@ -18,3 +29,6 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+.. _NaMaster: https://github.com/LSSTDESC/NaMaster
+.. _nawrapper: https://github.com/xzackli/nawrapper

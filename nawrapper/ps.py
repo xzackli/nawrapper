@@ -293,23 +293,6 @@ def compute_spectra(namap1, namap2, bins=None, mc=None):
     return Cb
 
 class namap:
-    """
-    This object organizes the various ingredients that are required for a
-    map to be used in power spectra analysis. Each map has an associated
-
-    1. I (optional QU) map
-    2. mask, referring to the product of hits and point source mask
-    3. beam transfer function
-
-    This object also does k-space filtering upon creation, to avoid
-    having to compute the spherical harmonics of the map multiple times.
-
-    By default, we do not reproduce the output of Steve's code. For
-    reproducibility, we do offer this functionality. Set the optional flag
-    `legacy_steve=True` to offset the mask and the map by one pixel in each
-    dimension.
-    """
-
     def __init__(self,
                  map_I, mask, beam=None,
                  map_Q=None, map_U=None,
@@ -318,9 +301,24 @@ class namap:
                  kx=0, ky=0, kspace_apo=40, unpixwin=True,
                 legacy_steve=False):
         """Create a new namap.
-        
-        This multiplies the apodized k-space taper into your mask. In 
-        general, your mask should already have the edges tapered, so this
+
+        This object organizes the various ingredients that are required for a
+        map to be used in power spectra analysis. Each map has an associated
+
+        1. I (optional QU) map
+        2. mask, referring to the product of hits and point source mask
+        3. beam transfer function
+
+        This object also does k-space filtering upon creation, to avoid
+        having to compute the spherical harmonics of the map multiple times.
+
+        By default, we do not reproduce the output of Steve's code. For
+        reproducibility, we do offer this functionality. Set the optional flag
+        `legacy_steve=True` to offset the mask and the map by one pixel in each
+        dimension.
+
+        This constructor multiplies the apodized k-space taper into your mask.
+        In general, your mask should already have the edges tapered, so this
         will not change your results significantly.
 
         Parameters
@@ -389,7 +387,7 @@ class namap:
         apo = get_steve_apo(self.shape, self.wcs,
                                          kspace_apo)
         mask *= apo # multiply the apodized taper into your mask
-        
+
         self.map_I = nw.kfilter_map(
             self.map_I, apo, kx, ky, unpixwin=unpixwin,
                 legacy_steve=legacy_steve)
@@ -462,7 +460,7 @@ class mode_coupling:
 
 
     def compute_master(self, f_a, f_b, wsp) :
-        """Utility function for computing mode-coupling-corrected spectra.
+        """Utility method for computing mode-coupling-corrected spectra.
 
         Parameters
         ----------
