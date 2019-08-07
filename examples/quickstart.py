@@ -11,10 +11,10 @@ shape,wcs = enmap.geometry(shape=(1024,1024),
 # create power spectrum information
 ells = np.arange(0,6000,1)
 ps = np.zeros(len(ells))
-ps[1:] = 1/ells[1:]**2.5
+ps[2:] = 1/ells[2:]**2.5 # don't want monopole/dipole
 
 # generate a realization
-imap = enmap.rand_map(shape,wcs,ps[None,None])
+imap = enmap.rand_map(shape,wcs,ps[np.newaxis,np.newaxis])
 # plt.imshow(imap)
 
 mask = enmap.ones(imap.shape, imap.wcs)
@@ -38,8 +38,8 @@ mask = nw.apod_C2(mask, 0.5) # apodize the mask
 ells = np.arange(0,len(ps),1)
 nl = np.ones(len(ells)) * 1e-8
 
-noise_map_1 = enmap.rand_map(shape,wcs,nl[None,None])
-noise_map_2 = enmap.rand_map(shape,wcs,nl[None,None])
+noise_map_1 = enmap.rand_map(shape,wcs,nl[np.newaxis,np.newaxis])
+noise_map_2 = enmap.rand_map(shape,wcs,nl[np.newaxis,np.newaxis])
 
 # plt.plot(ps, label="ps")
 # plt.plot(nl, label="noise")

@@ -246,13 +246,13 @@ def compute_spectra(namap1, namap2, bins=None, mc=None):
         The first map to compute correlations with.
     namap2 : :py:class:`nawrapper.ps.namap` object.
         To be correlated with `namap1`.
-    bins (optional) : NaMaster NmtBin object
+    bins : NaMaster NmtBin object (optional)
         At least one of `bins` or `mc` must be specified. If you specify
         `bins` (possibly from the output of :py:func:`nawrapper.ps.read_bins`)
         then a new mode coupling matrix will be computed within this function
         call. If you have already computed a relevant mode-coupling matrix,
         then pass `mc` instead.
-    mc : :py:class:`nawrapper.ps.mode_coupling` object
+    mc : :py:class:`nawrapper.ps.mode_coupling` object (optional)
         This object contains precomputed mode-coupling matrices.
 
     Returns
@@ -312,10 +312,9 @@ class namap:
         This object also does k-space filtering upon creation, to avoid
         having to compute the spherical harmonics of the map multiple times.
 
-        By default, we do not reproduce the output of Steve's code. For
-        reproducibility, we do offer this functionality. Set the optional flag
-        `legacy_steve=True` to offset the mask and the map by one pixel in each
-        dimension.
+        By default, we do not reproduce the output of Steve's code. We do offer
+        this functionality: set the optional flag `legacy_steve=True` to offset
+        the mask and the map by one pixel in each dimension.
 
         This constructor multiplies the apodized k-space taper into your mask.
         In general, your mask should already have the edges tapered, so this
