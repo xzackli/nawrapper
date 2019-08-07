@@ -1,13 +1,14 @@
+"""Power spectrum utilities."""
+
 import nawrapper as nw
 import pymaster as nmt
 import scipy
 import numpy as np
-import matplotlib.pyplot as plt
-from pixell import enmap, enplot
+from pixell import enmap
 
 
 def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
-    """Apply a k-space filter on a map.
+    r"""Apply a k-space filter on a map.
 
     Parameters
     ----------
@@ -48,21 +49,21 @@ def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
     """
     alm = enmap.fft(m * apo, normalize=True)
 
-    if unpixwin: # remove pixel window in Fourier space
+    if unpixwin:  # remove pixel window in Fourier space
         wy, wx = enmap.calc_window(m.shape)
-        alm /= (wy[:,np.newaxis])
-        alm /= (wx[np.newaxis,:])
+        alm /= (wy[:, np.newaxis])
+        alm /= (wx[np.newaxis, :])
 
     ly, lx = enmap.lmap(alm.shape, alm.wcs)
     kfilter_x = (np.abs(lx) >= kx_cut)
     kfilter_y = (np.abs(ly) >= ky_cut)
 
-    if legacy_steve: # Steve's kspace filter appears to do this
-        cut_x_k = np.unique(lx[(np.abs(lx) <= kx_cut )])
-        cut_y_k = np.unique(ly[(np.abs(ly) <= ky_cut )])
+    if legacy_steve:  # Steve's kspace filter appears to do this
+        cut_x_k = np.unique(lx[(np.abs(lx) <= kx_cut)])
+        cut_y_k = np.unique(ly[(np.abs(ly) <= ky_cut)])
         # keep most negative kx and most positive ky
-        kfilter_x[ np.isclose(lx, cut_x_k[0]) ] = True
-        kfilter_y[ np.isclose(ly, cut_y_k[-1]) ] = True
+        kfilter_x[np.isclose(lx, cut_x_k[0])] = True
+        kfilter_y[np.isclose(ly, cut_y_k[-1])] = True
 
     result = enmap.ifft(alm * kfilter_x * kfilter_y,
                         normalize=True).real
@@ -71,7 +72,7 @@ def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
 
 
 def get_steve_apo(shape, wcs, width, N_cut=0):
-    """Generates a tapered mask at the edges of the box.
+    r"""Generate a tapered mask at the edges of the box.
 
     Maps of actual data are unlikely to be periodic, which will induce
     ringing when one applies a k-space filter. To solve this, we taper the
@@ -95,23 +96,24 @@ def get_steve_apo(shape, wcs, width, N_cut=0):
     -------
     apo : enmap
         A smooth mask that is one in the center and tapers to zero at the edges.
+
     """
     apo = enmap.ones(shape, wcs=wcs)
-    apo_i= np.arange(width)
-    apo_profile = 1-(-np.sin(2.0*np.pi*(width-apo_i)/
-                             (width-N_cut))/(2.0*np.pi)
+    apo_i = np.arange(width)
+    apo_profile = 1-(-np.sin(2.0*np.pi*(width-apo_i) /
+                     (width-N_cut))/(2.0*np.pi)
                      + (width-apo_i)/(width-N_cut))
 
     # set it up for x and y edges
-    apo[:width,:] *= apo_profile[:, np.newaxis]
-    apo[:,:width] *= apo_profile[np.newaxis, :]
-    apo[-width:,:] *= apo_profile[::-1, np.newaxis]
-    apo[:,-width:] *= apo_profile[np.newaxis, ::-1]
+    apo[:width, :] *= apo_profile[:, np.newaxis]
+    apo[:, :width] *= apo_profile[np.newaxis, :]
+    apo[-width:, :] *= apo_profile[::-1, np.newaxis]
+    apo[:, -width:] *= apo_profile[np.newaxis, ::-1]
     return apo
 
 
 def get_distance(input_mask):
-    """
+    r"""
     Construct a map of the distance to the nearest zero pixel in the input.
 
     Parameters
@@ -125,14 +127,16 @@ def get_distance(input_mask):
         This map is the same size as the `input_mask`. Each pixel of this map
         contains the distance to the nearest zero pixel at the corresponding
         location in the input_mask.
+
     """
-    pixSize_arcmin= np.sqrt(input_mask.pixsize()*(60*180/np.pi)**2)
-    dist = scipy.ndimage.distance_transform_edt( np.asarray(input_mask) )
+    pixSize_arcmin = np.sqrt(input_mask.pixsize()*(60*180/np.pi)**2)
+    dist = scipy.ndimage.distance_transform_edt(np.asarray(input_mask))
     dist *= pixSize_arcmin/60
     return dist
 
-def apod_C2(input_mask,radius):
-    """
+
+def apod_C2(input_mask, radius):
+    r"""
     Apodizes an input mask over a radius in degrees.
 
     A sharp mask will cause complicated mode coupling and ringing. One solution
@@ -152,21 +156,21 @@ def apod_C2(input_mask,radius):
     -------
     result : enmap
         The apodized mask.
-    """
 
-    if radius==0:
+    """
+    if radius == 0:
         return input_mask
     else:
-        dist=get_distance(input_mask)
-        id=np.where(dist > radius)
-        win=dist/radius-np.sin(2*np.pi*dist/radius)/(2*np.pi)
-        win[id]=1
+        dist = get_distance(input_mask)
+        id = np.where(dist > radius)
+        win = dist/radius-np.sin(2*np.pi*dist/radius)/(2*np.pi)
+        win[id] = 1
 
-    return( enmap.ndmap(win, input_mask.wcs) )
+    return enmap.ndmap(win, input_mask.wcs)
 
 
 def read_bins(file, lmax=7925, is_Dell=False):
-    """Read bins from an ASCII file and create a NmtBin object.
+    r"""Read bins from an ASCII file and create a NmtBin object.
 
     This is a utility function to read ACT binning files and create a
     NaMaster NmtBin object. The file format consists of three columns: the
@@ -187,13 +191,14 @@ def read_bins(file, lmax=7925, is_Dell=False):
     -------
     b : pymaster.NmtBin
         Returns a NaMaster binning object.
+
     """
     binleft, binright, bincenter = np.loadtxt(
         file, unpack=True,
         dtype={'names': ('binleft', 'binright', 'bincenter'),
                'formats': ('i', 'i', 'f')})
     ells = np.arange(lmax)
-    bpws=-1+np.zeros_like(ells) #Array of bandpower indices
+    bpws = -1 + np.zeros_like(ells)  # Array of bandpower indices
     for i, (bl, br) in enumerate(zip(binleft[1:], binright[1:])):
         bpws[bl:br+1] = i
 
@@ -204,7 +209,7 @@ def read_bins(file, lmax=7925, is_Dell=False):
 
 
 def read_beam(beam_file, wcs=None):
-    """Read a beam file from disk.
+    r"""Read a beam file from disk.
 
     Parameters
     ----------
@@ -220,6 +225,7 @@ def read_beam(beam_file, wcs=None):
     numpy array (float)
         Contains the beam :math:`B_{\ell}` where index `i` corresponds to
         multipole `i` (i.e. this array starts at ell = 0).
+
     """
     if wcs is None:
         # assume it's a regular ACT map
@@ -229,12 +235,12 @@ def read_beam(beam_file, wcs=None):
     beam_t = np.loadtxt(beam_file)
     lmax_beam = int(180.0/abs(np.min(cdelts))) + 1
     beam_data = np.zeros(lmax_beam)
-    beam_data[:beam_t.shape[0]] = beam_t[:,1].astype(float)
+    beam_data[:beam_t.shape[0]] = beam_t[:, 1].astype(float)
     return beam_data
 
 
 def compute_spectra(namap1, namap2, bins=None, mc=None):
-    """Compute all of the spectra between two maps.
+    r"""Compute all of the spectra between two maps.
 
     This computes all cross spectra between two :py:class:`nawrapper.ps.namap`.
     If both input namap objects have polarization information, then polarization
@@ -260,8 +266,8 @@ def compute_spectra(namap1, namap2, bins=None, mc=None):
     Cb : dictionary
         Binned spectra, with the relevant cross spectra (i.e. 'TT', 'TE', 'EE')
         as dictionary keys. This also contains the bin centers as key 'ell'.
-    """
 
+    """
     if bins is None and mc is None:
         raise ValueError(
             "You must specify either a binning or a mode coupling object.")
@@ -269,7 +275,7 @@ def compute_spectra(namap1, namap2, bins=None, mc=None):
     if mc is None:
         mc = nw.mode_coupling(namap1, namap2, bins)
 
-    Cb={}
+    Cb = {}
     Cb['TT'] = mc.compute_master(
         namap1.field_spin0, namap2.field_spin0, mc.w00)[0]
 
@@ -292,15 +298,18 @@ def compute_spectra(namap1, namap2, bins=None, mc=None):
     Cb['ell'] = mc.lb
     return Cb
 
+
 class namap:
+    """Object for organizing map products."""
+
     def __init__(self,
                  map_I, mask, beam=None,
                  map_Q=None, map_U=None,
                  mask_pol=None,
                  shape=None, wcs=None,
                  kx=0, ky=0, kspace_apo=40, unpixwin=True,
-                legacy_steve=False):
-        """Create a new namap.
+                 legacy_steve=False):
+        r"""Create a new namap.
 
         This object organizes the various ingredients that are required for a
         map to be used in power spectra analysis. Each map has an associated
@@ -348,8 +357,8 @@ class namap:
         legacy_steve : boolean
             If true, adds (-1,-1) to input map `wcs.crpix`
             to mimic the behavior of Steve's code.
-        """
 
+        """
         if wcs is None:
             self.shape = mask.shape
             self.wcs = mask.wcs
@@ -361,7 +370,7 @@ class namap:
 
         # needed to reproduce steve's spectra
         if legacy_steve:
-            map_I.wcs.wcs.crpix += np.array([-1,-1])
+            map_I.wcs.wcs.crpix += np.array([-1, -1])
 
         if beam is None:
             lmax_beam = int(180.0/abs(np.min(self.wcs.wcs.cdelt))) + 1
@@ -383,13 +392,12 @@ class namap:
         self.mask = enmap.extract(mask, self.shape, self.wcs)
 
         # k-space filter step (also correct for pixel window here!)
-        apo = get_steve_apo(self.shape, self.wcs,
-                                         kspace_apo)
-        mask *= apo # multiply the apodized taper into your mask
+        apo = get_steve_apo(self.shape, self.wcs, kspace_apo)
+        mask *= apo  # multiply the apodized taper into your mask
 
         self.map_I = nw.kfilter_map(
             self.map_I, apo, kx, ky, unpixwin=unpixwin,
-                legacy_steve=legacy_steve)
+            legacy_steve=legacy_steve)
 
         if self.pol:
             self.map_Q = nw.kfilter_map(
@@ -400,18 +408,17 @@ class namap:
                 legacy_steve=legacy_steve)
 
         # construct the a_lm of the maps
-        self.field_spin0 = nmt.NmtField(self.mask,
-                                  [self.map_I],
-                                  beam=self.beam,
-                                  wcs=self.wcs, n_iter=0)
+        self.field_spin0 = nmt.NmtField(
+            self.mask, [self.map_I],
+            beam=self.beam, wcs=self.wcs, n_iter=0)
         if self.pol:
             self.field_spin2 = nmt.NmtField(
-                self.mask_pol,[self.map_Q, self.map_U],
+                self.mask_pol, [self.map_Q, self.map_U],
                 beam=self.beam, wcs=self.wcs, n_iter=0)
 
 
 class mode_coupling:
-    """Wrapper around the NaMaster workspace object.
+    r"""Wrapper around the NaMaster workspace object.
 
     This object contains the computationally intensive parts of mode coupling.
     It stores `w00`, the (spin-0, spin-0) mode coupling matrix, and optionally
@@ -421,7 +428,7 @@ class mode_coupling:
     """
 
     def __init__(self, namap1, namap2, bins):
-        """
+        r"""
         Create a `mode_coupling` object.
 
         namap1: namap
@@ -431,13 +438,12 @@ class mode_coupling:
         bins : pymaster NmtBin object
             We generate binned mode coupling matrices with this NaMaster binning
             object.
+
         """
-
-
         self.lb = bins.get_effective_ells()
         self.w00 = nmt.NmtWorkspace()
         self.w00.compute_coupling_matrix(namap1.field_spin0, namap2.field_spin0,
-                                        bins, n_iter=0)
+                                         bins, n_iter=0)
 
         if namap1.pol and namap2.pol:
             self.pol = True
@@ -449,17 +455,15 @@ class mode_coupling:
             self.w20.compute_coupling_matrix(
                 namap1.field_spin2, namap2.field_spin0,
                 bins, n_iter=0)
-            self.w22=nmt.NmtWorkspace()
+            self.w22 = nmt.NmtWorkspace()
             self.w22.compute_coupling_matrix(
                 namap1.field_spin2, namap2.field_spin2,
                 bins, n_iter=0)
         else:
             self.pol = False
 
-
-
-    def compute_master(self, f_a, f_b, wsp) :
-        """Utility method for computing mode-coupling-corrected spectra.
+    def compute_master(self, f_a, f_b, wsp):
+        """Compute mode-coupling-corrected spectra.
 
         Parameters
         ----------
@@ -475,7 +479,9 @@ class mode_coupling:
         numpy array
             Contains the TT spectrum if correlating two spin-0 maps, or
             the TE/TB or EE/EB spectra if working with (spin-0, spin-2)
-            and (spin-2, spin-2) maps respectively."""
+            and (spin-2, spin-2) maps respectively.
+
+        """
         cl_coupled = nmt.compute_coupled_cell(f_a, f_b)
         cl_decoupled = wsp.decouple_cell(cl_coupled)
         return cl_decoupled
