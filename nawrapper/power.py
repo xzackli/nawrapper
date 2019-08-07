@@ -1,172 +1,9 @@
-"""Power spectrum utilities."""
+"""Power spectrum objects and utilities."""
 
-import nawrapper as nw
 import pymaster as nmt
-import scipy
 import numpy as np
 from pixell import enmap
-
-
-def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
-    r"""Apply a k-space filter on a map.
-
-    Parameters
-    ----------
-    m : enmap
-        Input map which this function will filter.
-    apo : enmap
-        This map is a smooth tapering of the edges of the map, to be multiplied
-        into the map prior to filtering. The filtered map is divided by the
-        nonzero pixels of this map at the end. This is required because
-        maps of actual data are unlikely to be periodic, which will induce
-        ringing when one applies a k-space filter. To solve this, we taper the
-        edges of the map to zero prior to filtering.
-
-        See :py:func:`nawrapper.ps.get_steve_apo`
-    kx_cut : float
-        We cut modes with wavenumber :math:`|k_x| < k_x^{\mathrm{cut}}`.
-    ky_cut : float
-        We cut modes with wavenumber :math:`|k_y| < k_y^{\mathrm{cut}}`.
-    unpixwin : bool
-        Correct for the CAR pixel window if True.
-    legacy_steve : bool
-        Use a slightly different filter if True, to reproduce Steve's pipeline.
-        Steve's k-space filter as of June 2019 had a bug where two k-space
-        modes (the most positive cut mode in x and most negative cut mode in y)
-        were not cut. This has a very small effect on the spectrum, but for
-        reproducibility purposes we offer this behavior. By default we do not
-        use this.
-
-        To reproduce Steve's code behavior you should set
-        set `legacy_steve=True` here and in the constructor for each
-        :py:class:`nawrapper.ps.namap`.
-
-    Returns
-    -------
-    result : enmap
-        The map with the specified k-space filter applied.
-
-    """
-    alm = enmap.fft(m * apo, normalize=True)
-
-    if unpixwin:  # remove pixel window in Fourier space
-        wy, wx = enmap.calc_window(m.shape)
-        alm /= (wy[:, np.newaxis])
-        alm /= (wx[np.newaxis, :])
-
-    ly, lx = enmap.lmap(alm.shape, alm.wcs)
-    kfilter_x = (np.abs(lx) >= kx_cut)
-    kfilter_y = (np.abs(ly) >= ky_cut)
-
-    if legacy_steve:  # Steve's kspace filter appears to do this
-        cut_x_k = np.unique(lx[(np.abs(lx) <= kx_cut)])
-        cut_y_k = np.unique(ly[(np.abs(ly) <= ky_cut)])
-        # keep most negative kx and most positive ky
-        kfilter_x[np.isclose(lx, cut_x_k[0])] = True
-        kfilter_y[np.isclose(ly, cut_y_k[-1])] = True
-
-    result = enmap.ifft(alm * kfilter_x * kfilter_y,
-                        normalize=True).real
-    result[apo > 0.0] = result[apo > 0.0] / apo[apo > 0.0]
-    return result
-
-
-def get_steve_apo(shape, wcs, width, N_cut=0):
-    r"""Generate a tapered mask at the edges of the box.
-
-    Maps of actual data are unlikely to be periodic, which will induce
-    ringing when one applies a k-space filter. To solve this, we taper the
-    edges of the map to zero prior to filtering. This taper was written to match
-    the output of Steve's power spectrum pipeline, for reproducibility.
-
-    See :py:func:`nawrapper.ps.kfilter_map`.
-
-    Parameters
-    ----------
-    shape : tuple of ints
-        Shape of the map to be tapered.
-    wcs : astropy wcs object
-        WCS information for the map
-    width : float
-        width of the taper
-    N_cut : int
-        number of pixels to set to zero at the edges of the map
-
-    Returns
-    -------
-    apo : enmap
-        A smooth mask that is one in the center and tapers to zero at the edges.
-
-    """
-    apo = enmap.ones(shape, wcs=wcs)
-    apo_i = np.arange(width)
-    apo_profile = 1-(-np.sin(2.0*np.pi*(width-apo_i) /
-                     (width-N_cut))/(2.0*np.pi)
-                     + (width-apo_i)/(width-N_cut))
-
-    # set it up for x and y edges
-    apo[:width, :] *= apo_profile[:, np.newaxis]
-    apo[:, :width] *= apo_profile[np.newaxis, :]
-    apo[-width:, :] *= apo_profile[::-1, np.newaxis]
-    apo[:, -width:] *= apo_profile[np.newaxis, ::-1]
-    return apo
-
-
-def get_distance(input_mask):
-    r"""
-    Construct a map of the distance to the nearest zero pixel in the input.
-
-    Parameters
-    ----------
-    input_mask : enmap
-        The input mask
-
-    Returns
-    -------
-    dist : enmap
-        This map is the same size as the `input_mask`. Each pixel of this map
-        contains the distance to the nearest zero pixel at the corresponding
-        location in the input_mask.
-
-    """
-    pixSize_arcmin = np.sqrt(input_mask.pixsize()*(60*180/np.pi)**2)
-    dist = scipy.ndimage.distance_transform_edt(np.asarray(input_mask))
-    dist *= pixSize_arcmin/60
-    return dist
-
-
-def apod_C2(input_mask, radius):
-    r"""
-    Apodizes an input mask over a radius in degrees.
-
-    A sharp mask will cause complicated mode coupling and ringing. One solution
-    is to smooth out the sharp edges. This function applies the C2 apodisation
-    as defined in 0903.2350_.
-
-    .. _0903.2350: https://arxiv.org/abs/0903.2350
-
-    Parameters
-    ----------
-    input_mask: enmap
-        The input mask (must have all pixel values be non-negative).
-    radius: float
-        Apodization radius in degrees.
-
-    Returns
-    -------
-    result : enmap
-        The apodized mask.
-
-    """
-    if radius == 0:
-        return input_mask
-    else:
-        dist = get_distance(input_mask)
-        id = np.where(dist > radius)
-        win = dist/radius-np.sin(2*np.pi*dist/radius)/(2*np.pi)
-        win[id] = 1
-
-    return enmap.ndmap(win, input_mask.wcs)
+import nawrapper.maputils as maputils
 
 
 def read_bins(file, lmax=7925, is_Dell=False):
@@ -208,17 +45,17 @@ def read_bins(file, lmax=7925, is_Dell=False):
     return b
 
 
-def read_beam(beam_file, wcs=None):
+def read_beam(beam_file):
     r"""Read a beam file from disk.
+
+    This function will interpolate a beam file with columns
+    :math:`\ell, B_{\ell}` to a 1D array where index corresponds to
+    :math:`\ell`.
 
     Parameters
     ----------
     beam_file : str
         The filename of the beam
-    wcs : astropy.wcs object (optional)
-        If you are using a non-standard pixelization, the maximum multipole
-        that NaMaster requires may be different. If this is the case, pass
-        your strange pixelization's WCS object here.
 
     Returns
     -------
@@ -227,15 +64,11 @@ def read_beam(beam_file, wcs=None):
         multipole `i` (i.e. this array starts at ell = 0).
 
     """
-    if wcs is None:
-        # assume it's a regular ACT map
-        cdelts = 0.00833333
-    else:
-        cdelts = wcs.wcs.cdelt
     beam_t = np.loadtxt(beam_file)
-    lmax_beam = int(180.0/abs(np.min(cdelts))) + 1
-    beam_data = np.zeros(lmax_beam)
-    beam_data[:beam_t.shape[0]] = beam_t[:, 1].astype(float)
+    max_beam_l = np.max(beam_t[:, 0].astype(int))
+    beam_data = np.zeros(max_beam_l)
+    beam_data = np.interp(np.arange(max_beam_l),
+                          fp=beam_t[:, 1].astype(float), xp=beam_t[:, 0])
     return beam_data
 
 
@@ -273,7 +106,7 @@ def compute_spectra(namap1, namap2, bins=None, mc=None):
             "You must specify either a binning or a mode coupling object.")
 
     if mc is None:
-        mc = nw.mode_coupling(namap1, namap2, bins)
+        mc = mode_coupling(namap1, namap2, bins)
 
     Cb = {}
     Cb['TT'] = mc.compute_master(
@@ -303,12 +136,20 @@ class namap:
     """Object for organizing map products."""
 
     def __init__(self,
+
+                 # basic parameters
                  map_I, mask, beam=None,
                  map_Q=None, map_U=None,
                  mask_pol=None,
+
+                 # CAR specific parameters
                  shape=None, wcs=None,
                  kx=0, ky=0, kspace_apo=40, unpixwin=True,
-                 legacy_steve=False):
+                 legacy_steve=False,
+
+                 # healpix specific parameters
+                 nside=None
+                 ):
         r"""Create a new namap.
 
         This object organizes the various ingredients that are required for a
@@ -323,11 +164,17 @@ class namap:
 
         By default, we do not reproduce the output of Steve's code. We do offer
         this functionality: set the optional flag `legacy_steve=True` to offset
-        the mask and the map by one pixel in each dimension.
-
-        This constructor multiplies the apodized k-space taper into your mask.
+        the mask and the map by one pixel in each dimension. This constructor
+        multiplies the apodized k-space taper into your mask.
         In general, your mask should already have the edges tapered, so this
         will not change your results significantly.
+
+        This objects defaults to CAR maps. You can instead use healpix maps
+        by specifying an `nside`. Pass in IQU maps and masks as
+        numpy arrays, and don't use the CAR specific parameters (
+        `shape`, `wcs`, and the k-space filtering options). **You cannot compute
+        spectra between a CAR and a healpix map.** If this is your goal, convert
+        both maps to one pixelization first.
 
         Parameters
         ----------
@@ -359,62 +206,94 @@ class namap:
             to mimic the behavior of Steve's code.
 
         """
-        if wcs is None:
-            self.shape = mask.shape
-            self.wcs = mask.wcs
-        else:
-            self.shape = shape
-            self.wcs = wcs
+        self.map_I, self.map_Q, self.map_U = map_I, map_Q, map_U
+        self.mask, self.mask_pol = mask, mask_pol
 
-        self.legacy_steve = legacy_steve
-
-        # needed to reproduce steve's spectra
-        if legacy_steve:
-            map_I.wcs.wcs.crpix += np.array([-1, -1])
-
-        if beam is None:
-            lmax_beam = int(180.0/abs(np.min(self.wcs.wcs.cdelt))) + 1
-            self.beam = np.ones(lmax_beam)
-        else:
-            self.beam = beam
-
-        # extract to common shape and wcs
-        self.map_I = enmap.extract(map_I, self.shape, self.wcs)
-
+        # check to see if there is polarization information
         if map_Q is not None:
             self.pol = True
-            self.map_Q = enmap.extract(map_Q, self.shape, self.wcs)
-            self.map_U = enmap.extract(map_U, self.shape, self.wcs)
-            self.mask_pol = enmap.extract(mask_pol, self.shape, self.wcs)
         else:
             self.pol = False
 
-        self.mask = enmap.extract(mask, self.shape, self.wcs)
+        # branch here based on CAR or healpix
+        if nside is None:
+            # assuming CAR if nside is not specified
+
+            self.mode = 'CAR'
+            if wcs is None:  # inherit the mask's shape and WCS if not specified
+                shape = mask.shape
+                wcs = mask.wcs
+            self.shape = shape
+            self.wcs = wcs
+            self.lmax_beam = int(180.0/abs(np.min(self.wcs.wcs.cdelt))) + 1
+            self.legacy_steve = legacy_steve
+            # needed to reproduce steve's spectra
+            if legacy_steve:
+                self.map_I.wcs.wcs.crpix += np.array([-1, -1])
+            self.set_beam(beam)
+            self.extract_and_filter(kx, ky, kspace_apo, legacy_steve, unpixwin)
+
+            # construct the a_lm of the maps
+            self.field_spin0 = nmt.NmtField(
+                self.mask, [self.map_I],
+                beam=self.beam, wcs=self.wcs, n_iter=0)
+            if self.pol:
+                self.field_spin2 = nmt.NmtField(
+                    self.mask_pol, [self.map_Q, self.map_U],
+                    beam=self.beam, wcs=self.wcs, n_iter=0)
+        else:
+            # construct healpix maps if nside is specified
+            self.nside = nside
+            self.mode = 'healpix'
+            self.lmax_beam = 3 * nside + 1
+            self.set_beam(beam)
+            # construct the a_lm of the maps
+            self.field_spin0 = nmt.NmtField(
+                self.mask, [self.map_I],
+                beam=self.beam, n_iter=0)
+            if self.pol:
+                self.field_spin2 = nmt.NmtField(
+                    self.mask_pol, [self.map_Q, self.map_U],
+                    beam=self.beam, n_iter=0)
+
+    def set_beam(self, beam):
+        """Set and extend the object's beam."""
+        if beam is None:
+            self.beam = np.ones(self.lmax_beam)
+        else:
+            self.beam = np.zeros(self.lmax_beam)
+            self.beam[:len(beam)] = beam
+
+    def extract_and_filter(self, kx, ky, kspace_apo, legacy_steve, unpixwin):
+        """Extract and filter this initialized namap.
+
+        See constructor for parameters.
+        """
+        # extract to common shape and wcs
+        self.map_I = enmap.extract(self.map_I, self.shape, self.wcs)
+
+        if self.pol:
+            self.map_Q = enmap.extract(self.map_Q, self.shape, self.wcs)
+            self.map_U = enmap.extract(self.map_U, self.shape, self.wcs)
+            self.mask_pol = enmap.extract(self.mask_pol, self.shape, self.wcs)
+
+        self.mask = enmap.extract(self.mask, self.shape, self.wcs)
 
         # k-space filter step (also correct for pixel window here!)
-        apo = get_steve_apo(self.shape, self.wcs, kspace_apo)
-        mask *= apo  # multiply the apodized taper into your mask
+        apo = maputils.get_steve_apo(self.shape, self.wcs, kspace_apo)
+        self.mask *= apo  # multiply the apodized taper into your mask
 
-        self.map_I = nw.kfilter_map(
+        self.map_I = maputils.kfilter_map(
             self.map_I, apo, kx, ky, unpixwin=unpixwin,
             legacy_steve=legacy_steve)
 
         if self.pol:
-            self.map_Q = nw.kfilter_map(
+            self.map_Q = maputils.kfilter_map(
                 self.map_Q, apo, kx, ky, unpixwin=unpixwin,
                 legacy_steve=legacy_steve)
-            self.map_U = nw.kfilter_map(
+            self.map_U = maputils.kfilter_map(
                 self.map_U, apo, kx, ky, unpixwin=unpixwin,
                 legacy_steve=legacy_steve)
-
-        # construct the a_lm of the maps
-        self.field_spin0 = nmt.NmtField(
-            self.mask, [self.map_I],
-            beam=self.beam, wcs=self.wcs, n_iter=0)
-        if self.pol:
-            self.field_spin2 = nmt.NmtField(
-                self.mask_pol, [self.map_Q, self.map_U],
-                beam=self.beam, wcs=self.wcs, n_iter=0)
 
 
 class mode_coupling:

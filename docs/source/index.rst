@@ -6,8 +6,8 @@
 NaWrapper
 =========
 
-`NaWrapper`_ is a thin python wrapper around `NaMaster`_ for CMB work in rectangular
-pixelization, in particular for the ACT experiment.
+`NaWrapper`_ is a thin python wrapper around `NaMaster`_ for CMB work,
+in particular for the ACT experiment.
 
 .. figure:: _static/outline.svg
 

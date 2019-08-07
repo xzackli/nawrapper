@@ -1,1 +1,1 @@
-from .ps import *
+"""Package init file."""

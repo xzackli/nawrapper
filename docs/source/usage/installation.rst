@@ -31,7 +31,7 @@ to compute some spectra (and in your SLURM power spectrum jobs!).
 
 .. code:: bash
 
-   conda activate ps
+  conda activate ps
 
 You will need to install some other necessary packages into your conda
 environment, if you just created it. Note that we are using ``-n`` to
@@ -39,7 +39,7 @@ specify the conda environment!
 
 .. code:: bash
 
-   conda install -n ps matplotlib cython numpy scipy astropy pillow
+  conda install -n ps matplotlib cython numpy scipy astropy pillow
 
 If you are running on a machine with Jupyter like cori or niagara, we
 also set up ipykernel so your conda environment shows up in Jupyter. You
@@ -48,9 +48,9 @@ Cluster`_).
 
 .. code:: bash
 
-   conda install -n ps ipykernel
-   python -m ipykernel install --user \
-       --name ps --display-name "Python 3 (ps)"
+  conda install -n ps ipykernel
+  python -m ipykernel install --user \
+     --name ps --display-name "Python 3 (ps)"
 
 
 .. _installingsoftware:
@@ -62,28 +62,35 @@ We now install the power spectrum software. Install NaMaster with
 
 .. code:: bash
 
-   conda install -c conda-forge namaster -n ps
+  conda install -c conda-forge namaster -n ps
 
-You also need to install pixell. This involves cloning a GitHub repository, so
-for convenience you might want to `set up your SSH keys on GitHub`_. If you are on
-niagara, you will also need to ``module load autotools`` to get autoconf
+You also need to install pixell for CAR map manipulation. This involves cloning
+a GitHub repository, so for convenience you might want to `set up your SSH keys
+on GitHub`_. If you are on niagara, you will also need to
+``module load autotools`` to get autoconf
 before installing pixell. Go to the directory where you keep your software, and
 run
 
 .. code:: bash
 
-   git clone git@github.com:simonsobs/pixell.git
-   cd pixell
-   python setup.py install --user
+  git clone git@github.com:simonsobs/pixell.git
+  cd pixell
+  python setup.py install --user
+
+You also need `healpy` to manipulate healpix maps.
+
+.. code:: bash
+
+    pip install healpy
 
 Then install nawrapper (these routines for ACT power spectrum analysis). Return to
 the directory where you keep your software, and then run
 
 .. code:: bash
 
-   git clone git@github.com:xzackli/nawrapper.git
-   cd nawrapper
-   pip install -e . --user
+  git clone git@github.com:xzackli/nawrapper.git
+  cd nawrapper
+  pip install -e . --user
 
 You should be all set! Try out the :ref:`quickstart`.
 
