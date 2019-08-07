@@ -2,10 +2,9 @@ Installation
 ============
 
 
-This guide is intended for people who are not currently using Anaconda
-on Niagara. If you already have a conda environment on Niagara which
-works with Jupyter, skip to below to the subsection titled “Installing the
-Power Spectrum Software”.
+This guide is intended for people who are not currently using Anaconda. If you
+already have a Python 3 conda environment, skip below to the
+subsection :ref:`installingsoftware`.
 
 Create a Conda Environment
 --------------------------
@@ -53,6 +52,9 @@ Cluster`_).
    python -m ipykernel install --user \
        --name ps --display-name "Python 3 (ps)"
 
+
+.. _installingsoftware:
+
 Installing Software
 -------------------
 
@@ -62,9 +64,11 @@ We now install the power spectrum software. Install NaMaster with
 
    conda install -c conda-forge namaster -n ps
 
-You must also install pixell if you do not have it. If you are on
-niagara, you will need to ``module load autotools`` to get autoconf
-first.
+You also need to install pixell. This involves cloning a GitHub repository, so
+for convenience you might want to `set up your SSH keys on GitHub`_. If you are on
+niagara, you will also need to ``module load autotools`` to get autoconf
+before installing pixell. Go to the directory where you keep your software, and
+run
 
 .. code:: bash
 
@@ -72,7 +76,8 @@ first.
    cd pixell
    python setup.py install --user
 
-Then install nawrapper (my routines for ACT power spectrum analysis).
+Then install nawrapper (these routines for ACT power spectrum analysis). Return to
+the directory where you keep your software, and then run
 
 .. code:: bash
 
@@ -80,9 +85,9 @@ Then install nawrapper (my routines for ACT power spectrum analysis).
    cd nawrapper
    pip install -e . --user
 
-You should be all set! Try out the ``Getting Started.ipynb`` in the
-``notebooks/`` folder.
+You should be all set! Try out the :ref:`quickstart`.
 
 .. _NaMaster: https://github.com/LSSTDESC/NaMaster
 .. _documentation: http://physics.princeton.edu/~zequnl/nawrapper/docs/build/html/index.html
 .. _Jupyter on the Cluster: https://oncomputingwell.princeton.edu/2018/05/jupyter-on-the-cluster/
+.. _set up your SSH keys on GitHub: https://help.github.com/en/articles/adding-a-new-ssh-key-to-your-github-account

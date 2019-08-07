@@ -1,9 +1,43 @@
+
+.. _quickstart:
+
 Quickstart
 ==========
 
+Workflow Tips
+-------------
+Although this package works perfectly fine on a laptop, you should probably
+do your science analysis on the cluster. A set of four standard ACT resolution
+split maps takes ~5 minutes to cook into spectra on a 40-core tiger node. The
+same on your laptop would take more than three hours!
+
+Some clusters have Jupyter support, but we've found it nice to run this
+quickstart tutorial with `ipython`. You might need to install it to your conda
+environment.
+
+.. code:: bash
+
+  conda install ipython -n YOUR_ENV_NAME
+
+To get your plots to appear on your laptop, make sure to tunnel in with `ssh -Y`.
+
+NaMaster also depends on the environmental variable `OMP_NUM_THREADS` to
+determine how many threads to run in parallel. On tiger, I run
+
+.. code:: bash
+
+  export OMP_NUM_THREADS=40
+
+before running any code. You should set this, with the number corresponding to
+the number of cores on your machine.
 
 Simulated Maps
--------------------------
+--------------
+
+In this example, we generate some fake spectra plagued by bright point sources.
+We then mask those sources and generate spectra which have been corrected for
+the mode coupling induced by our mask. This example is also available as a
+`Jupyter notebook`_.
 
 We start by importing our libraries.
 
@@ -78,8 +112,9 @@ For additional realism we generate noise power spectra to add to our "splits".
 .. figure:: ../_static/noise_power.png
   :scale: 60%
 
-For this example, we won't include a beam. Now we set up the namap objects,
-adding our original random map to the noise realization.
+For this example, we won't include a beam. Now we set up the
+:py:class:`nawrapper.ps.namap` objects, using as input our
+our original random realization summed with the noise realizations.
 
 .. code:: python
 
@@ -87,8 +122,10 @@ adding our original random map to the noise realization.
   namap_2 = nw.namap(map_I=imap + noise_map_2, mask=mask)
 
 Next we compute the mode-coupling matrix. We need the binning file, which
-we store in `notebooks/data/`. You'll need to point it to the right path on
-your own installation.
+we have in the `repository`_ under `notebooks/data/`. You'll need to point it to
+the right path on your own installation. This is the slow part, you might want
+to get a snack while you wait (about 5 minutes on 1 core for a map of this
+size).
 
 .. code:: python
 
@@ -103,7 +140,19 @@ mode coupling object.
 
   Cb = nw.compute_spectra(namap_1, namap_2, mc=mc)
 
+Let's plot it!
+
+.. code:: python
+
+  plt.plot(ps, 'k-', label='input')
+  plt.plot(Cb['ell'], Cb['TT'], 'r.', label='computed')
+  plt.legend()
+  plt.yscale('log')
+
 .. figure:: ../_static/result_ps.png
   :scale: 60%
 
 We've recovered our input spectrum!
+
+.. _repository: https://github.com/xzackli/nawrapper/tree/master/notebooks/data
+.. _Jupyter notebook: https://github.com/xzackli/nawrapper/blob/master/notebooks/Getting%20Started.ipynb
