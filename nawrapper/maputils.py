@@ -3,6 +3,7 @@
 import scipy
 import numpy as np
 from pixell import enmap
+import healpy as hp
 
 
 def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
@@ -165,3 +166,26 @@ def apod_C2(input_mask, radius):
         win[id] = 1
 
     return enmap.ndmap(win, input_mask.wcs)
+
+
+def sub_mono_di(map_in, mask_in, nside,
+                sub_dipole=True, verbose=False):
+    """Subtract monopole and dipole from a healpix map."""
+    map_masked = hp.ma(map_in)
+    map_masked.mask = (mask_in < 1)
+    mono, dipole = hp.pixelfunc.fit_dipole(map_masked)
+    if verbose:
+        print('mono:', mono, ', dipole:', dipole)
+    m = map_in.copy()
+    npix = hp.nside2npix(nside)
+    bunchsize = npix // 24
+    for ibunch in range(npix // bunchsize):  # adapted from healpy
+        ipix = np.arange(ibunch * bunchsize, (ibunch + 1) * bunchsize)
+        ipix = ipix[(np.isfinite(m.flat[ipix]))]
+        x, y, z = hp.pix2vec(nside, ipix, False)
+        if sub_dipole:
+            m.flat[ipix] -= dipole[0] * x
+            m.flat[ipix] -= dipole[1] * y
+            m.flat[ipix] -= dipole[2] * z
+        m.flat[ipix] -= mono
+    return m

@@ -1,75 +1,10 @@
 """Power spectrum objects and utilities."""
 
 import pymaster as nmt
+import healpy as hp
 import numpy as np
 from pixell import enmap
 import nawrapper.maputils as maputils
-
-
-def read_bins(file, lmax=7925, is_Dell=False):
-    r"""Read bins from an ASCII file and create a NmtBin object.
-
-    This is a utility function to read ACT binning files and create a
-    NaMaster NmtBin object. The file format consists of three columns: the
-    left bin edge (int), the right bin edge (int), and the bin center (float).
-
-    Parameters
-    ----------
-    file : str
-        Filename of the binning to read.
-    lmax : int
-        Maximum ell to create bins to.
-    is_Dell : bool
-        Will generate :math:`D_{\ell} = \ell (\ell + 1) C_{\ell} / (2 \pi)`
-        if True, instead of :math:`C_{\ell}`. This may cause order 1% effects
-        due to weighting inside bins.
-
-    Returns
-    -------
-    b : pymaster.NmtBin
-        Returns a NaMaster binning object.
-
-    """
-    binleft, binright, bincenter = np.loadtxt(
-        file, unpack=True,
-        dtype={'names': ('binleft', 'binright', 'bincenter'),
-               'formats': ('i', 'i', 'f')})
-    ells = np.arange(lmax)
-    bpws = -1 + np.zeros_like(ells)  # Array of bandpower indices
-    for i, (bl, br) in enumerate(zip(binleft[1:], binright[1:])):
-        bpws[bl:br+1] = i
-
-    weights = np.array([1.0 / np.sum(bpws == bpws[l]) for l in range(lmax)])
-    b = nmt.NmtBin(2048, bpws=bpws, ells=ells, weights=weights,
-                   lmax=lmax, is_Dell=is_Dell)
-    return b
-
-
-def read_beam(beam_file):
-    r"""Read a beam file from disk.
-
-    This function will interpolate a beam file with columns
-    :math:`\ell, B_{\ell}` to a 1D array where index corresponds to
-    :math:`\ell`.
-
-    Parameters
-    ----------
-    beam_file : str
-        The filename of the beam
-
-    Returns
-    -------
-    numpy array (float)
-        Contains the beam :math:`B_{\ell}` where index `i` corresponds to
-        multipole `i` (i.e. this array starts at ell = 0).
-
-    """
-    beam_t = np.loadtxt(beam_file)
-    max_beam_l = np.max(beam_t[:, 0].astype(int))
-    beam_data = np.zeros(max_beam_l)
-    beam_data = np.interp(np.arange(max_beam_l),
-                          fp=beam_t[:, 1].astype(float), xp=beam_t[:, 0])
-    return beam_data
 
 
 def compute_spectra(namap1, namap2, bins=None, mc=None):
@@ -136,19 +71,20 @@ class namap:
     """Object for organizing map products."""
 
     def __init__(self,
-
                  # basic parameters
                  map_I, mask, beam=None,
                  map_Q=None, map_U=None,
                  mask_pol=None,
+                 unpixwin=True,
 
                  # CAR specific parameters
                  shape=None, wcs=None,
-                 kx=0, ky=0, kspace_apo=40, unpixwin=True,
+                 kx=0, ky=0, kspace_apo=40,
                  legacy_steve=False,
 
                  # healpix specific parameters
-                 nside=None
+                 nside=None,
+                 sub_monopole=False, sub_dipole=False
                  ):
         r"""Create a new namap.
 
@@ -205,6 +141,16 @@ class namap:
             If true, adds (-1,-1) to input map `wcs.crpix`
             to mimic the behavior of Steve's code.
 
+        nside : int
+            nside describes the size of a healpix map. Pass this if you want
+            to use healpix pixelization instead of CAR.
+        sub_monopole : bool
+            Turn on to fit and remove the monopole from the I map. Only for
+            healpix.
+        sub_dipole : bool
+            Turn on to fit and remove the dipole from the I map. Only for
+            healpix. Cannot be used without sub_monopole.
+
         """
         self.map_I, self.map_Q, self.map_U = map_I, map_Q, map_U
         self.mask, self.mask_pol = mask, mask_pol
@@ -212,51 +158,76 @@ class namap:
         # check to see if there is polarization information
         if map_Q is not None:
             self.pol = True
+            if mask_pol is None:
+                mask_pol = mask
         else:
             self.pol = False
 
         # branch here based on CAR or healpix
         if nside is None:
             # assuming CAR if nside is not specified
-
             self.mode = 'CAR'
-            if wcs is None:  # inherit the mask's shape and WCS if not specified
-                shape = mask.shape
-                wcs = mask.wcs
-            self.shape = shape
-            self.wcs = wcs
-            self.lmax_beam = int(180.0/abs(np.min(self.wcs.wcs.cdelt))) + 1
-            self.legacy_steve = legacy_steve
-            # needed to reproduce steve's spectra
-            if legacy_steve:
-                self.map_I.wcs.wcs.crpix += np.array([-1, -1])
-            self.set_beam(beam)
-            self.extract_and_filter(kx, ky, kspace_apo, legacy_steve, unpixwin)
-
-            # construct the a_lm of the maps
-            self.field_spin0 = nmt.NmtField(
-                self.mask, [self.map_I],
-                beam=self.beam, wcs=self.wcs, n_iter=0)
-            if self.pol:
-                self.field_spin2 = nmt.NmtField(
-                    self.mask_pol, [self.map_Q, self.map_U],
-                    beam=self.beam, wcs=self.wcs, n_iter=0)
+            self.__initialize_CAR_map(map_I, mask, beam, map_Q, map_U,
+                                      mask_pol, unpixwin, shape, wcs,
+                                      kx, ky, kspace_apo, legacy_steve)
         else:
             # construct healpix maps if nside is specified
-            self.nside = nside
             self.mode = 'healpix'
-            self.lmax_beam = 3 * nside + 1
-            self.set_beam(beam)
-            # construct the a_lm of the maps
-            self.field_spin0 = nmt.NmtField(
-                self.mask, [self.map_I],
-                beam=self.beam, n_iter=0)
-            if self.pol:
-                self.field_spin2 = nmt.NmtField(
-                    self.mask_pol, [self.map_Q, self.map_U],
-                    beam=self.beam, n_iter=0)
+            self.__initialize_hp_map(map_I, mask, beam, map_Q, map_U,
+                                     mask_pol, unpixwin, nside,
+                                     sub_monopole, sub_dipole)
 
-    def set_beam(self, beam):
+    def __initialize_CAR_map(self, map_I, mask, beam, map_Q, map_U,
+                             mask_pol, unpixwin, shape, wcs,
+                             kx, ky, kspace_apo, legacy_steve):
+        if wcs is None:  # inherit the mask's shape and WCS if not specified
+            shape = mask.shape
+            wcs = mask.wcs
+        self.shape = shape
+        self.wcs = wcs
+        self.lmax_beam = int(180.0/abs(np.min(self.wcs.wcs.cdelt))) + 1
+        self.legacy_steve = legacy_steve
+        # needed to reproduce steve's spectra
+        if legacy_steve:
+            self.map_I.wcs.wcs.crpix += np.array([-1, -1])
+        self.set_beam(beam)
+        self.extract_and_filter_CAR(kx, ky, kspace_apo,
+                                    legacy_steve, unpixwin)
+
+        # construct the a_lm of the maps
+        self.field_spin0 = nmt.NmtField(
+            self.mask, [self.map_I],
+            beam=self.beam, wcs=self.wcs, n_iter=0)
+        if self.pol:
+            self.field_spin2 = nmt.NmtField(
+                self.mask_pol, [self.map_Q, self.map_U],
+                beam=self.beam, wcs=self.wcs, n_iter=0)
+
+    def __initialize_hp_map(self,
+                            map_I, mask, beam, map_Q, map_U, mask_pol, unpixwin,
+                            nside, sub_monopole, sub_dipole):
+        self.nside = nside
+        self.lmax_beam = 3 * nside
+        self.set_beam(beam)
+        self.beam_T = self.beam.copy()
+        self.beam_P = self.beam.copy()
+        pixwin_T, pixwin_P = hp.sphtfunc.pixwin(self.nside, pol=True)
+        if unpixwin:  # apply healpix pixel window
+            self.beam_T *= pixwin_T[:len(self.beam)]
+            self.beam_P *= pixwin_P[:len(self.beam)]
+        if sub_monopole:  # subtract TT monopole and dipole
+            self.map_I = maputils.sub_mono_di(self.map_I, self.mask,
+                                              nside, sub_dipole)
+        # construct the a_lm of the maps
+        self.field_spin0 = nmt.NmtField(
+            self.mask, [self.map_I],
+            beam=self.beam_T, n_iter=0)
+        if self.pol:
+            self.field_spin2 = nmt.NmtField(
+                self.mask_pol, [self.map_Q, self.map_U],
+                beam=self.beam_P, n_iter=0)
+
+    def set_beam(self, beam, apply_healpix_window=False):
         """Set and extend the object's beam."""
         if beam is None:
             self.beam = np.ones(self.lmax_beam)
@@ -264,8 +235,8 @@ class namap:
             self.beam = np.zeros(self.lmax_beam)
             self.beam[:len(beam)] = beam
 
-    def extract_and_filter(self, kx, ky, kspace_apo, legacy_steve, unpixwin):
-        """Extract and filter this initialized namap.
+    def extract_and_filter_CAR(self, kx, ky, kspace_apo, legacy_steve, unpixwin):
+        """Extract and filter this initialized CAR namap.
 
         See constructor for parameters.
         """
@@ -364,3 +335,118 @@ class mode_coupling:
         cl_coupled = nmt.compute_coupled_cell(f_a, f_b)
         cl_decoupled = wsp.decouple_cell(cl_coupled)
         return cl_decoupled
+
+
+def read_bins(file, lmax=7925, is_Dell=False):
+    r"""Read bins from an ASCII file and create a NmtBin object.
+
+    This is a utility function to read ACT binning files and create a
+    NaMaster NmtBin object. The file format consists of three columns: the
+    left bin edge (int), the right bin edge (int), and the bin center (float).
+
+    Parameters
+    ----------
+    file : str
+        Filename of the binning to read.
+    lmax : int
+        Maximum ell to create bins to.
+    is_Dell : bool
+        Will generate :math:`D_{\ell} = \ell (\ell + 1) C_{\ell} / (2 \pi)`
+        if True, instead of :math:`C_{\ell}`. This may cause order 1% effects
+        due to weighting inside bins.
+
+    Returns
+    -------
+    b : pymaster.NmtBin
+        Returns a NaMaster binning object.
+
+    """
+    binleft, binright, bincenter = np.loadtxt(
+        file, unpack=True,
+        dtype={'names': ('binleft', 'binright', 'bincenter'),
+               'formats': ('i', 'i', 'f')})
+    ells = np.arange(lmax)
+    bpws = -1 + np.zeros_like(ells)  # Array of bandpower indices
+    for i, (bl, br) in enumerate(zip(binleft[1:], binright[1:])):
+        bpws[bl:br+1] = i
+
+    weights = np.array([1.0 / np.sum(bpws == bpws[l]) for l in range(lmax)])
+    b = nmt.NmtBin(2048, bpws=bpws, ells=ells, weights=weights,
+                   lmax=lmax, is_Dell=is_Dell)
+    return b
+
+
+def get_unbinned_bins(lmax, nside=None):
+    """Generate an unbinned NaMaster binning for l>1.
+
+    Parameters
+    ----------
+    lmax : int
+        maximum multipole to include bins to
+    nside : int
+        The NmtBin actually chooses the maximum multipole as the
+        minimum of `lmax`, `3*nside-1`.
+
+    Returns
+    -------
+    b : NmtBin
+        contains a bin for every ell up to lmax
+
+    """
+    bpws_ell = np.arange(lmax+1)
+    bpws = bpws_ell - 2  # array of bandpower indices
+    bpws[bpws < 0] = -1  # set ell=0,1 to -1 : i.e. not included
+    weights = np.ones_like(bpws)
+    if nside is None:
+        nside = lmax
+    b = nmt.NmtBin(nside, bpws=bpws, ells=bpws_ell, weights=weights, lmax=lmax)
+    return b
+
+
+def read_beam(beam_file):
+    r"""Read a beam file from disk.
+
+    This function will interpolate a beam file with columns
+    :math:`\ell, B_{\ell}` to a 1D array where index corresponds to
+    :math:`\ell`.
+
+    Parameters
+    ----------
+    beam_file : str
+        The filename of the beam
+
+    multiply_healpix_window : bool
+
+    Returns
+    -------
+    numpy array (float)
+        Contains the beam :math:`B_{\ell}` where index `i` corresponds to
+        multipole `i` (i.e. this array starts at ell = 0).
+
+    """
+    beam_t = np.loadtxt(beam_file)
+    max_beam_l = np.max(beam_t[:, 0].astype(int))
+    beam_data = np.zeros(max_beam_l)
+    beam_data = np.interp(np.arange(max_beam_l),
+                          fp=beam_t[:, 1].astype(float), xp=beam_t[:, 0])
+    return beam_data
+
+
+def bin_spec_dict(Cb, binleft, binright, lmax):
+    """Bin an unbinned spectra dictionary with a specified l^2 binning."""
+    ell_sub_list = [np.arange(l, r) for (l, r) in zip(binleft, binright+1)]
+    lb = np.array([np.sum(ell_sub) / len(ell_sub) for ell_sub in ell_sub_list])
+
+    result = {}
+    for spec_key in Cb:
+        ell_sub_list = [np.arange(l, r) for (l, r) in zip(binleft, binright+1)]
+        lb = np.array([np.sum(ell_sub) / len(ell_sub) for ell_sub in ell_sub_list])
+        cl_from_zero = np.zeros(lmax + 1)
+        cl_from_zero[Cb['ell'].astype(int)] = Cb[spec_key] * 1e12
+        weights = np.arange(lmax + 1) * (np.arange(lmax + 1) + 1)
+        result[spec_key] = np.array(
+            [np.sum((weights * cl_from_zero)[ell_sub]) /
+             np.sum(weights[ell_sub]) for ell_sub in ell_sub_list])
+
+    result['ell'] = lb
+    return result
