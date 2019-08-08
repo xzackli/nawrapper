@@ -32,7 +32,8 @@ release = '0.1'
 # ones.
 extensions = ['sphinx.ext.napoleon',
               'sphinx.ext.mathjax',
-              'sphinxcontrib.inkscapeconverter']
+#               'sphinxcontrib.inkscapeconverter' # want this for PDF
+             ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

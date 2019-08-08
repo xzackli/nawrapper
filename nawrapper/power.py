@@ -290,6 +290,7 @@ class mode_coupling:
             object.
 
         """
+        self.bins = bins
         self.lb = bins.get_effective_ells()
         self.w00 = nmt.NmtWorkspace()
         self.w00.compute_coupling_matrix(namap1.field_spin0, namap2.field_spin0,

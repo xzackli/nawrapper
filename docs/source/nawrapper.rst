@@ -4,10 +4,26 @@ nawrapper package
 Submodules
 ----------
 
-nawrapper.ps module
--------------------
+nawrapper.cov module
+--------------------
 
-.. automodule:: nawrapper.ps
+.. automodule:: nawrapper.cov
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+nawrapper.maputils module
+-------------------------
+
+.. automodule:: nawrapper.maputils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+nawrapper.power module
+----------------------
+
+.. automodule:: nawrapper.power
    :members:
    :undoc-members:
    :show-inheritance:

@@ -43,7 +43,7 @@ We start by importing our libraries.
 
 .. code:: python
 
-  import nawrapper.power as nw
+  import nawrapper as nw
   import pymaster as nmt
   import numpy as np
   import matplotlib.pyplot as plt
