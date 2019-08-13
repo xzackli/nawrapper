@@ -74,7 +74,7 @@ class namap:
                  # basic parameters
                  map_I, mask, beam=None,
                  map_Q=None, map_U=None,
-                 mask_pol=None,
+                 mask_pol=None, beam_pol=None,
                  unpixwin=True,
 
                  # CAR specific parameters
@@ -162,23 +162,27 @@ class namap:
                 mask_pol = mask
         else:
             self.pol = False
+        
+        if beam_pol is None:
+            beam_pol = beam
 
         # branch here based on CAR or healpix
         if nside is None:
             # assuming CAR if nside is not specified
             self.mode = 'CAR'
             self.__initialize_CAR_map(map_I, mask, beam, map_Q, map_U,
-                                      mask_pol, unpixwin, shape, wcs,
+                                      mask_pol, beam_pol, unpixwin, shape, wcs,
                                       kx, ky, kspace_apo, legacy_steve)
         else:
             # construct healpix maps if nside is specified
             self.mode = 'healpix'
-            self.__initialize_hp_map(map_I, mask, beam, map_Q, map_U,
-                                     mask_pol, unpixwin, nside,
-                                     sub_monopole, sub_dipole)
+            self.__initialize_hp_map(map_I, mask, beam, map_Q, map_U, 
+                                     mask_pol, beam_pol, unpixwin,
+                                     nside, sub_monopole, sub_dipole)
 
-    def __initialize_CAR_map(self, map_I, mask, beam, map_Q, map_U,
-                             mask_pol, unpixwin, shape, wcs,
+    def __initialize_CAR_map(self, map_I, mask, beam, 
+                             map_Q, map_U, mask_pol, beam_pol, 
+                             unpixwin, shape, wcs,
                              kx, ky, kspace_apo, legacy_steve):
         if wcs is None:  # inherit the mask's shape and WCS if not specified
             shape = mask.shape
@@ -190,7 +194,7 @@ class namap:
         # needed to reproduce steve's spectra
         if legacy_steve:
             self.map_I.wcs.wcs.crpix += np.array([-1, -1])
-        self.set_beam(beam)
+        self.set_beam(beam, beam_pol)
         self.extract_and_filter_CAR(kx, ky, kspace_apo,
                                     legacy_steve, unpixwin)
 
@@ -201,39 +205,42 @@ class namap:
         if self.pol:
             self.field_spin2 = nmt.NmtField(
                 self.mask_pol, [self.map_Q, self.map_U],
-                beam=self.beam, wcs=self.wcs, n_iter=0)
+                beam=self.beam_pol, wcs=self.wcs, n_iter=0)
 
     def __initialize_hp_map(self,
-                            map_I, mask, beam, map_Q, map_U, mask_pol, unpixwin,
+                            map_I, mask, beam, 
+                            map_Q, map_U, mask_pol, beam_pol, 
+                            unpixwin,
                             nside, sub_monopole, sub_dipole):
         self.nside = nside
         self.lmax_beam = 3 * nside
-        self.set_beam(beam)
-        self.beam_T = self.beam.copy()
-        self.beam_P = self.beam.copy()
+        self.set_beam(beam, beam_pol)
         pixwin_T, pixwin_P = hp.sphtfunc.pixwin(self.nside, pol=True)
         if unpixwin:  # apply healpix pixel window
-            self.beam_T *= pixwin_T[:len(self.beam)]
-            self.beam_P *= pixwin_P[:len(self.beam)]
+            self.beam *= pixwin_T[:len(self.beam)]
+            self.beam_pol *= pixwin_P[:len(self.beam_pol)]
         if sub_monopole:  # subtract TT monopole and dipole
             self.map_I = maputils.sub_mono_di(self.map_I, self.mask,
                                               nside, sub_dipole)
         # construct the a_lm of the maps
         self.field_spin0 = nmt.NmtField(
             self.mask, [self.map_I],
-            beam=self.beam_T, n_iter=0)
+            beam=self.beam, n_iter=0)
         if self.pol:
             self.field_spin2 = nmt.NmtField(
                 self.mask_pol, [self.map_Q, self.map_U],
-                beam=self.beam_P, n_iter=0)
+                beam=self.beam_pol, n_iter=0)
 
-    def set_beam(self, beam, apply_healpix_window=False):
+    def set_beam(self, beam, beam_pol, apply_healpix_window=False):
         """Set and extend the object's beam."""
         if beam is None:
             self.beam = np.ones(self.lmax_beam)
+            self.beam_pol = np.ones(self.lmax_beam)
         else:
             self.beam = np.zeros(self.lmax_beam)
             self.beam[:len(beam)] = beam
+            self.beam_pol = np.zeros(self.lmax_beam)
+            self.beam_pol[:len(beam_pol)] = beam_pol
 
     def extract_and_filter_CAR(self, kx, ky, kspace_apo, legacy_steve, unpixwin):
         """Extract and filter this initialized CAR namap.
