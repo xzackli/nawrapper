@@ -94,4 +94,4 @@ def get_Nl(theta_fwhm=(10., 7., 5.),
                     -l*(l+1)*theta_fwhm[channel]**2/8./np.log(2.))
         noise_T[l] = 1/noise_T[l]
     return noise_T
-        
+

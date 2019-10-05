@@ -92,7 +92,7 @@ class namap:
         map to be used in power spectra analysis. Each map has an associated
 
         1. I (optional QU) map
-        2. mask, referring to the product of hits and point source mask
+        2. mask, referring to the product of hits, point source mask, etc.
         3. beam transfer function
 
         This object also does k-space filtering upon creation, to avoid
