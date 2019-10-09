@@ -353,6 +353,44 @@ class mode_coupling:
     def write_to_dir(self, mcm_dir):
         # create directory
         pathlib.Path(mcm_dir).mkdir(parents=True, exist_ok=True)
+        
+        # extract bin kwargs
+        lmax = self.bins.lmax
+        bpws_copy = -np.ones(lmax+1).astype(int)
+        weights_copy = np.ones(lmax+1).astype(int)
+        l_eff = self.bins.get_effective_ells()
+        for i in range(len(l_eff)):
+            bpws_copy[self.bins.get_ell_list(i)] = i
+            weights_copy[self.bins.get_ell_list(i)] = self.bins.get_weight_list(i)
+        
+        # basic json
+        data = {
+            'pol': self.pol,
+            'w00': 'w00.bin'
+        }
+        
+        # write binaries
+        self.w00.write_to(f'{mcm_dir}/w00.bin')
+        
+        if self.pol:
+            self.w02.write_to(f'{mcm_dir}/w02.bin')
+            self.w20.write_to(f'{mcm_dir}/w20.bin')
+            self.w22.write_to(f'{mcm_dir}/w22.bin')
+            # add pol entries to json if necessary
+            data.update({'w02': 'w02.bin', 'w20': 'w20.bin', 'w22': 'w22.bin'})
+        
+        # write bin kwargs
+        data['bin_kwargs'] = {
+            'nside' : 2048,
+            'lmax' : lmax,
+            'ells' : np.arange(lmax+1).tolist(),
+            'bpws' : bpws_copy.tolist(),
+            'weights' : weights_copy.tolist()
+        }
+            
+        with open(f'{mcm_dir}/mcm.json', 'w') as write_file:
+            json.dump(data, write_file)
+    
     
     def compute_master(self, f_a, f_b, wsp):
         """Compute mode-coupling-corrected spectra.
@@ -424,7 +462,7 @@ def get_unbinned_bins(lmax, nside=None):
     Parameters
     ----------
     lmax : int
-        maximum multipole to include bins to
+        maximum multipole to include bins
     nside : int
         The NmtBin actually chooses the maximum multipole as the
         minimum of `lmax`, `3*nside-1`.
