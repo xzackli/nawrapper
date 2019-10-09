@@ -5,7 +5,8 @@ import healpy as hp
 import numpy as np
 from pixell import enmap
 import nawrapper.maputils as maputils
-
+import json
+import pathlib
 
 def compute_spectra(namap1, namap2, bins=None, mc=None):
     r"""Compute all of the spectra between two maps.
@@ -273,6 +274,9 @@ class namap:
                 self.map_U, apo, kx, ky, unpixwin=unpixwin,
                 legacy_steve=legacy_steve)
 
+            
+
+            
 
 class mode_coupling:
     r"""Wrapper around the NaMaster workspace object.
@@ -284,7 +288,7 @@ class mode_coupling:
     data.
     """
 
-    def __init__(self, namap1, namap2, bins):
+    def __init__(self, namap1=None, namap2=None, bins=None, mcm_dir=None):
         r"""
         Create a `mode_coupling` object.
 
@@ -292,34 +296,64 @@ class mode_coupling:
             We use the mask in this namap to compute the mode-coupling matrices.
         namap2: namap
             We use the mask in this namap to compute the mode-coupling matrices.
-        bins : pymaster NmtBin object
+        bins: pymaster NmtBin object
             We generate binned mode coupling matrices with this NaMaster binning
             object.
-
+            
+        mcm_dir: string
+            Specify a directory which contains the workspace files for this mode-
+            coupling object.
         """
-        self.bins = bins
-        self.lb = bins.get_effective_ells()
-        self.w00 = nmt.NmtWorkspace()
-        self.w00.compute_coupling_matrix(namap1.field_spin0, namap2.field_spin0,
-                                         bins, n_iter=0)
-
-        if namap1.pol and namap2.pol:
-            self.pol = True
-            self.w02 = nmt.NmtWorkspace()
-            self.w02.compute_coupling_matrix(
-                namap1.field_spin0, namap2.field_spin2,
-                bins, n_iter=0)
-            self.w20 = nmt.NmtWorkspace()
-            self.w20.compute_coupling_matrix(
-                namap1.field_spin2, namap2.field_spin0,
-                bins, n_iter=0)
-            self.w22 = nmt.NmtWorkspace()
-            self.w22.compute_coupling_matrix(
-                namap1.field_spin2, namap2.field_spin2,
-                bins, n_iter=0)
+        
+        if mcm_dir is not None:
+            self.load_from_dir(mcm_dir)
         else:
-            self.pol = False
+            self.bins = bins
+            self.lb = bins.get_effective_ells()
 
+            self.w00 = nmt.NmtWorkspace()
+            self.w00.compute_coupling_matrix(namap1.field_spin0, namap2.field_spin0,
+                                             bins, n_iter=0)
+
+            if namap1.pol and namap2.pol:
+                self.pol = True
+                self.w02 = nmt.NmtWorkspace()
+                self.w02.compute_coupling_matrix(
+                    namap1.field_spin0, namap2.field_spin2,
+                    bins, n_iter=0)
+                self.w20 = nmt.NmtWorkspace()
+                self.w20.compute_coupling_matrix(
+                    namap1.field_spin2, namap2.field_spin0,
+                    bins, n_iter=0)
+                self.w22 = nmt.NmtWorkspace()
+                self.w22.compute_coupling_matrix(
+                    namap1.field_spin2, namap2.field_spin2,
+                    bins, n_iter=0)
+            else:
+                self.pol = False
+                
+    def load_from_dir(self, mcm_dir):
+        """Read information from a nawrapper mode coupling directory."""
+        with open(f'{mcm_dir}/mcm.json', 'r') as read_file:
+            data = (json.load(read_file))
+            self.bins = read_bins(data['binfile'])
+            self.lb = self.bins.get_effective_ells()
+            self.w00 = nmt.NmtWorkspace()
+            self.w00.read_from(data['w00'])
+            self.pol = data['pol']
+            
+            if self.pol:
+                self.w02 = nmt.NmtWorkspace()
+                self.w02.read_from(data['w02'])
+                self.w20 = nmt.NmtWorkspace()
+                self.w20.read_from(data['w20'])
+                self.w22 = nmt.NmtWorkspace()
+                self.w22.read_from(data['w22'])
+    
+    def write_to_dir(self, mcm_dir):
+        # create directory
+        pathlib.Path(mcm_dir).mkdir(parents=True, exist_ok=True)
+    
     def compute_master(self, f_a, f_b, wsp):
         """Compute mode-coupling-corrected spectra.
 
