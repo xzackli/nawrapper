@@ -1,7 +1,6 @@
 language: python
 python:
   # We don't actually use the Travis Python, but this keeps it organized.
-  - "3.5"
   - "3.6"
 install:
   - sudo apt-get update
@@ -22,6 +21,7 @@ install:
 
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyyaml matplotlib cython numpy scipy astropy pillow
   - conda activate test-environment
+  - conda install -c conda-forge namaster -n test-environment
   - pip install healpy
   - python setup.py install
   - git clone https://github.com/simonsobs/pixell.git
