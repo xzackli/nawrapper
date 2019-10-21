@@ -21,6 +21,7 @@ install:
 
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyyaml matplotlib cython numpy scipy astropy pillow
   - conda activate test-environment
+  - conda install -c conda-forge cfitsio
   - conda install -c conda-forge namaster -n test-environment
   - pip install healpy
   - git clone https://github.com/simonsobs/pixell.git
@@ -38,11 +39,12 @@ addons:
       - libfftw3-3
       - autotools-dev
       - autoconf
-      - libcfitsio3-dev
+      - libcfitsio-dev
+
+# Your test script goes here
 script:
   - coverage run test/runtests.py
 
 # Push the results back to codecov
 after_success:
   - codecov
-  # Your test script goes here
