@@ -23,7 +23,6 @@ install:
   - conda activate test-environment
   - conda install -c conda-forge namaster -n test-environment
   - pip install healpy
-  - python setup.py install
   - git clone https://github.com/simonsobs/pixell.git
   - cd pixell
   - python setup.py install --user
@@ -31,8 +30,15 @@ install:
   - pip install codecov
   - python setup.py install
 addons:
-  apt_packages:
-  - gfortran
+  apt:
+    packages:
+      - gfortran
+      - libfftw3-bin
+      - libfftw3-dev
+      - libfftw3-3
+      - autotools-dev
+      - autoconf
+      - libcfitsio3-dev
 script:
   - coverage run test/runtests.py
 
