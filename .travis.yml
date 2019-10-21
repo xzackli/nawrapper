@@ -28,9 +28,14 @@ install:
   - cd pixell
   - python setup.py install --user
   - cd ../
+  - pip install codecov
 addons:
   apt_packages:
   - gfortran
 script:
-  - python test/runtests.py
+  - coverage test/runtests.py
+
+# Push the results back to codecov
+after_success:
+  - codecov
   # Your test script goes here
