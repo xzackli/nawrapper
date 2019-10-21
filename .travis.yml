@@ -28,6 +28,8 @@ install:
   - cd pixell
   - python setup.py install --user
   - python setup.py test
-
+addons:
+  apt_packages:
+  - gfortran
 script:
   # Your test script goes here
