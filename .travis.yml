@@ -29,6 +29,7 @@ install:
   - python setup.py install --user
   - cd ../
   - pip install codecov
+  - python setup.py install
 addons:
   apt_packages:
   - gfortran
