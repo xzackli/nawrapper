@@ -19,7 +19,7 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
 
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyyaml matplotlib cython numpy scipy astropy pillow
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION nose pyyaml matplotlib cython numpy scipy astropy pillow
   - conda activate test-environment
   - conda install -c conda-forge cfitsio=3.430 libcblas gsl -n test-environment
   - conda install -c conda-forge namaster -n test-environment
@@ -37,7 +37,7 @@ addons:
 
 # Your test script goes here
 script:
-  - coverage run test/runtests.py
+  - nosetests --with-coverage
 
 # Push the results back to codecov
 after_success:
