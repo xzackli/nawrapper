@@ -27,9 +27,10 @@ install:
   - git clone https://github.com/simonsobs/pixell.git
   - cd pixell
   - python setup.py install --user
-  - python setup.py test
+  - cd ../
 addons:
   apt_packages:
   - gfortran
 script:
+  - python test/runtests.py
   # Your test script goes here
