@@ -1,5 +1,6 @@
 # nawrapper
 
+[![Latest](https://img.shields.io/badge/docs-dev-blue.svg)](https://xzackli.github.io/nawrapper/index.html)
 [![Build Status](https://travis-ci.com/xzackli/nawrapper.svg?branch=master)](https://travis-ci.com/xzackli/nawrapper)
 [![codecov](https://codecov.io/gh/xzackli/nawrapper/branch/master/graph/badge.svg)](https://codecov.io/gh/xzackli/nawrapper)
 
