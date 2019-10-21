@@ -19,7 +19,7 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
 
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION nose pyyaml matplotlib cython numpy scipy astropy pillow
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION nose sphinx pyyaml matplotlib cython numpy scipy astropy pillow
   - conda activate test-environment
   - conda install -c conda-forge cfitsio=3.430 libcblas gsl -n test-environment
   - conda install -c conda-forge namaster -n test-environment
@@ -42,3 +42,14 @@ script:
 # Push the results back to codecov
 after_success:
   - codecov
+  - cd docs && make html
+
+deploy:
+  provider: pages
+  skip-cleanup: true
+  keep-history: true
+  on:
+    branch: gh-pages
+  github-token: $GITHUB_TOKEN
+  local-dir: docs/build/html
+  committer-from-gh: true
