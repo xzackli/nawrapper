@@ -33,7 +33,7 @@ addons:
   apt_packages:
   - gfortran
 script:
-  - coverage test/runtests.py
+  - coverage run test/runtests.py
 
 # Push the results back to codecov
 after_success:
