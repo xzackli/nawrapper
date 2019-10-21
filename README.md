@@ -7,4 +7,4 @@
 `nawrapper` is a thin wrapper around [NaMaster](https://github.com/LSSTDESC/NaMaster)
 for CMB work, particularly for the ACT experiment. The intention is to hide some of NaMaster's generality for conciseness and simplicity.
 
-Read the [documentation](http://physics.princeton.edu/~zequnl/nawrapper/index.html) for detailed installation and usage instructions.
+Read the [documentation](https://xzackli.github.io/nawrapper/index.html) for detailed installation and usage instructions.
