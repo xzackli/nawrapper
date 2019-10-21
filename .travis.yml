@@ -1,7 +1,7 @@
 language: python
 python:
   # We don't actually use the Travis Python, but this keeps it organized.
-  - "3.6"
+  - "3.7"
 install:
   - sudo apt-get update
   # We do this conditionally because it saves us some downloading if the
@@ -21,7 +21,7 @@ install:
 
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyyaml matplotlib cython numpy scipy astropy pillow
   - conda activate test-environment
-  - conda install -c conda-forge cfitsio=3.430 -n test-environment
+  - conda install -c conda-forge cfitsio=3.430 libcblas gsl -n test-environment
   - conda install -c conda-forge namaster -n test-environment
   - pip install healpy
   - git clone https://github.com/simonsobs/pixell.git
