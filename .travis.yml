@@ -21,7 +21,7 @@ install:
   - conda info -a
 
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION matplotlib cython numpy scipy astropy pillow
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyyaml matplotlib cython numpy scipy astropy pillow
   - conda activate test-environment
   - python setup.py install
   - git clone https://github.com/simonsobs/pixell.git
