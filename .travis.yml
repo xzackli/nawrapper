@@ -29,7 +29,10 @@ install:
   - python setup.py install --user
   - cd ../
   - pip install codecov
+  - pip install --user travis-sphinx
+  - export PATH=$HOME/.local/bin:$PATH
   - python setup.py install
+  - travis-sphinx build
 addons:
   apt:
     packages:
@@ -42,14 +45,4 @@ script:
 # Push the results back to codecov
 after_success:
   - codecov
-  - cd docs && make html
-
-deploy:
-  provider: pages
-  skip-cleanup: true
-  keep-history: true
-  on:
-    branch: gh-pages
-  github-token: $GH_TOKEN
-  local-dir: docs/build/html
-  committer-from-gh: true
+  - travis-sphinx deploy
