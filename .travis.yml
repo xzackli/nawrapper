@@ -32,7 +32,6 @@ install:
   - pip install --user travis-sphinx
   - export PATH=$HOME/.local/bin:$PATH
   - python setup.py install
-  - travis-sphinx build
 addons:
   apt:
     packages:
@@ -41,6 +40,7 @@ addons:
 # Your test script goes here
 script:
   - nosetests --with-coverage
+  - travis-sphinx build
 
 # Push the results back to codecov
 after_success:

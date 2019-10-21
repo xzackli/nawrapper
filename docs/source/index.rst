@@ -22,6 +22,7 @@ utility functions for turning these into dictionaries of power spectra.
    usage/installation
    usage/quickstart
    usage/examples
+   modules
 
 
 Indices and tables
