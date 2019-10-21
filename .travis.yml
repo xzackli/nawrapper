@@ -19,9 +19,8 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
 
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyyaml matplotlib cython numpy scipy astropy pillow
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyyaml matplotlib cython numpy scipy astropy pillow cfitsio
   - conda activate test-environment
-  - conda install -c conda-forge cfitsio
   - conda install -c conda-forge namaster -n test-environment
   - pip install healpy
   - git clone https://github.com/simonsobs/pixell.git
@@ -40,6 +39,7 @@ addons:
       - autotools-dev
       - autoconf
       - libcfitsio-dev
+      - libcfitsio3
 
 # Your test script goes here
 script:
