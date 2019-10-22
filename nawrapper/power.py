@@ -11,9 +11,10 @@ import pathlib
 def compute_spectra(namap1, namap2, bins=None, mc=None):
     r"""Compute all of the spectra between two maps.
 
-    This computes all cross spectra between two :py:class:`nawrapper.ps.namap`.
-    If both input namap objects have polarization information, then polarization
-    cross-spectra will be computed. In all cases, TT is computed.
+    This computes all cross spectra between two :py:class:`nawrapper.ps.namap`
+    for which there is information. For example, TE spectra will be computed
+    only if the first map has a temperature map, and the second has a
+    polarization map.
 
     Parameters
     ----------
@@ -45,24 +46,29 @@ def compute_spectra(namap1, namap2, bins=None, mc=None):
         mc = mode_coupling(namap1, namap2, bins)
 
     Cb = {}
-    Cb['TT'] = mc.compute_master(
-        namap1.field_spin0, namap2.field_spin0, mc.w00)[0]
+    if namap1.has_temp and namap2.has_temp:
+        Cb['TT'] = mc.compute_master(
+            namap1.field_spin0, namap2.field_spin0, mc.w00)[0]
 
-    if namap1.pol and namap2.pol:
+    if namap1.has_temp and namap2.has_pol:
         spin1 = mc.compute_master(
             namap1.field_spin0, namap2.field_spin2, mc.w02)
         Cb['TE'] = spin1[0]
         Cb['TB'] = spin1[1]
+
+    if namap1.has_pol and namap2.has_temp:
+        spin1 = mc.compute_master(
+            namap1.field_spin2, namap2.field_spin0, mc.w20)
+        Cb['ET'] = spin1[0]
+        Cb['BT'] = spin1[1]
+
+    if namap1.has_pol and namap2.has_pol:
         spin2 = mc.compute_master(
             namap1.field_spin2, namap2.field_spin2, mc.w22)
         Cb['EE'] = spin2[0]
         Cb['EB'] = spin2[1]
         Cb['BE'] = spin2[2]
         Cb['BB'] = spin2[3]
-        spin1 = mc.compute_master(
-            namap1.field_spin2, namap2.field_spin0, mc.w20)
-        Cb['ET'] = spin1[0]
-        Cb['BT'] = spin1[1]
 
     Cb['ell'] = mc.lb
     return Cb
@@ -72,20 +78,23 @@ class namap:
     """Object for organizing map products."""
 
     def __init__(self,
-                 # basic parameters
-                 map_I, mask, beam=None,
-                 map_Q=None, map_U=None,
-                 mask_pol=None, beam_pol=None,
-                 unpixwin=True,
-
+                 # map
+                 map_I=None, map_Q=None, map_U=None,
+                 # beam
+                 beam_temp=None, beam_pol=None,
+                 # mask
+                 mask_temp=None, mask_pol=None,
                  # CAR specific parameters
                  shape=None, wcs=None,
                  kx=0, ky=0, kspace_apo=40,
                  legacy_steve=False,
-
                  # healpix specific parameters
                  nside=None,
-                 sub_monopole=False, sub_dipole=False
+                 # correction options
+                 unpixwin=True,
+                 sub_monopole=False, sub_dipole=False,
+                 # verbosity
+                 verbose=True
                  ):
         r"""Create a new namap.
 
@@ -122,10 +131,22 @@ class namap:
         map_I : pixell.enmap
             The Stokes U map you want to operate on.
 
-        mask : pixell.enmap
-            The mask for the map.
-        beam: 1D numpy array
+        mask_temp : pixell.enmap
+            The mask for the map in intensity.
+        mask_pol : pixell.enmap
+            The mask for the map in polarization.
+
+        beam_temp: 1D numpy array
             Beam transfer function :math:`B_{\ell}`.
+        beam_pol: 1D numpy array
+            Beam transfer function :math:`B_{\ell}`.
+
+        sub_monopole : bool
+            Turn on to fit and remove the monopole from the I map. Only for
+            healpix.
+        sub_dipole : bool
+            Turn on to fit and remove the dipole from the I map. Only for
+            healpix. Cannot be used without sub_monopole.
 
         shape : tuple
             In order to compute power spectra, every map and mask
@@ -145,46 +166,56 @@ class namap:
         nside : int
             nside describes the size of a healpix map. Pass this if you want
             to use healpix pixelization instead of CAR.
-        sub_monopole : bool
-            Turn on to fit and remove the monopole from the I map. Only for
-            healpix.
-        sub_dipole : bool
-            Turn on to fit and remove the dipole from the I map. Only for
-            healpix. Cannot be used without sub_monopole.
 
         """
         self.map_I, self.map_Q, self.map_U = map_I, map_Q, map_U
-        self.mask, self.mask_pol = mask, mask_pol
+        self.mask_temp, self.mask_pol = mask_temp, mask_pol
 
-        # check to see if there is polarization information
-        if map_Q is not None:
-            self.pol = True
-            if mask_pol is None:
-                mask_pol = mask
+        if nside is None:
+            self.mode = 'car'
         else:
-            self.pol = False
-        
-        if beam_pol is None:
-            beam_pol = beam
+            self.mode = 'healpix'
+
+        if verbose: print(f'Creating a {self.mode} map.\n')
+
+        self.has_temp = (map_I is not None)
+        self.has_pol = (map_Q is not None) && (map_U is not None)
+
+        if ((map_Q is None and map_U is not None) or
+                (map_Q is not None and map_U is None)):
+             raise ValueError("Q and U must both be specified for pol maps.")
+        if ((map_I is None) and (map_U is None) and (map_Q is None)):
+            raise ValueError("Must specify at least I or QU maps.")
+
+        # set masks = 1 if not specified.
+        if self.has_temp and self.mask_temp is None:
+            self.mask_temp = self.map_I * 0.0 + 1.0
+        if self.has_pol and self.mask_pol is None:
+            self.mask_pol = self.map_Q * 0.0 + 1.0
 
         # branch here based on CAR or healpix
-        if nside is None:
-            # assuming CAR if nside is not specified
-            self.mode = 'CAR'
-            self.__initialize_CAR_map(map_I, mask, beam, map_Q, map_U,
-                                      mask_pol, beam_pol, unpixwin, shape, wcs,
-                                      kx, ky, kspace_apo, legacy_steve)
+        if self.mode == 'car':
+            self.__initialize_CAR_map(
+                map_I=map_I, map_Q=map_Q, map_U=map_U,
+                mask_temp=mask_temp, mask_pol=mask_pol,
+                beam_temp=beam_temp, beam_pol=beam_pol,
+                unpixwin=unpixwin, shape=shape, wcs=wcs,
+                kx=kx, ky=ky, kspace_apo=kspace_apo, legacy_steve=legacy_steve)
         else:
-            # construct healpix maps if nside is specified
-            self.mode = 'healpix'
-            self.__initialize_hp_map(map_I, mask, beam, map_Q, map_U, 
-                                     mask_pol, beam_pol, unpixwin,
-                                     nside, sub_monopole, sub_dipole)
+            self.__initialize_hp_map(
+                map_I=map_I, map_Q=map_Q, map_U=map_U,
+                mask_temp=map_temp, mask_pol=mask_pol,
+                beam_temp=beam_temp, beam_pol=beam_pol,
+                unpixwin=unpixwin,
+                nside=nside, sub_monopole=sub_monopole, sub_dipole=sub_dipole)
 
-    def __initialize_CAR_map(self, map_I, mask, beam, 
-                             map_Q, map_U, mask_pol, beam_pol, 
-                             unpixwin, shape, wcs,
-                             kx, ky, kspace_apo, legacy_steve):
+
+    def __initialize_CAR_map(self,
+            map_I, map_Q, map_U,
+            mask_temp, mask_pol, beam_temp, beam_pol,
+            unpixwin, shape, wcs,
+            kx, ky, kspace_apo, legacy_steve):
+
         if wcs is None:  # inherit the mask's shape and WCS if not specified
             shape = mask.shape
             wcs = mask.wcs
@@ -195,53 +226,53 @@ class namap:
         # needed to reproduce steve's spectra
         if legacy_steve:
             self.map_I.wcs.wcs.crpix += np.array([-1, -1])
-        self.set_beam(beam, beam_pol)
+        self.set_beam(beam_temp, beam_pol)
         self.extract_and_filter_CAR(kx, ky, kspace_apo,
                                     legacy_steve, unpixwin)
 
         # construct the a_lm of the maps
-        self.field_spin0 = nmt.NmtField(
-            self.mask, [self.map_I],
-            beam=self.beam, wcs=self.wcs, n_iter=0)
-        if self.pol:
+        if self.has_temp:
+            self.field_spin0 = nmt.NmtField(
+                self.mask_temp, [self.map_I],
+                beam=self.beam_temp, wcs=self.wcs, n_iter=0)
+        if self.has_pol:
             self.field_spin2 = nmt.NmtField(
                 self.mask_pol, [self.map_Q, self.map_U],
                 beam=self.beam_pol, wcs=self.wcs, n_iter=0)
 
     def __initialize_hp_map(self,
-                            map_I, mask, beam, 
-                            map_Q, map_U, mask_pol, beam_pol, 
+                            map_I, map_Q, map_U,
+                            mask_temp, mask_pol,
+                            beam_temp, beam_pol,
                             unpixwin,
                             nside, sub_monopole, sub_dipole):
         self.nside = nside
         self.lmax_beam = 3 * nside
-        self.set_beam(beam, beam_pol)
+        self.set_beam(beam_temp, beam_pol)
         pixwin_T, pixwin_P = hp.sphtfunc.pixwin(self.nside, pol=True)
         if unpixwin:  # apply healpix pixel window
-            self.beam *= pixwin_T[:len(self.beam)]
+            self.beam_temp *= pixwin_T[:len(self.beam_temp)]
             self.beam_pol *= pixwin_P[:len(self.beam_pol)]
         if sub_monopole:  # subtract TT monopole and dipole
-            self.map_I = maputils.sub_mono_di(self.map_I, self.mask,
+            self.map_I = maputils.sub_mono_di(self.map_I, self.mask_temp,
                                               nside, sub_dipole)
-        # construct the a_lm of the maps
-        self.field_spin0 = nmt.NmtField(
-            self.mask, [self.map_I],
-            beam=self.beam, n_iter=0)
-        if self.pol:
+
+        # construct the a_lm of the maps, depending on what data is available
+        if self.has_temp:
+            self.field_spin0 = nmt.NmtField(
+                self.mask, [self.map_I],
+                beam=self.beam_temp, n_iter=0)
+        if self.has_pol:
             self.field_spin2 = nmt.NmtField(
                 self.mask_pol, [self.map_Q, self.map_U],
                 beam=self.beam_pol, n_iter=0)
 
-    def set_beam(self, beam, beam_pol, apply_healpix_window=False):
-        """Set and extend the object's beam."""
-        if beam is None:
-            self.beam = np.ones(self.lmax_beam)
-            self.beam_pol = np.ones(self.lmax_beam)
-        else:
-            self.beam = np.zeros(self.lmax_beam)
-            self.beam[:len(beam)] = beam
-            self.beam_pol = np.zeros(self.lmax_beam)
-            self.beam_pol[:len(beam_pol)] = beam_pol
+    def set_beam(self, beam_temp, beam_pol, apply_healpix_window=False):
+        """Set and extend the object's beam up to lmax."""
+        self.beam_temp = np.ones(self.lmax_beam)
+        if beam_temp is not None: self.beam_temp[:len(beam)] = self.beam_temp
+        self.beam_pol = np.ones(self.lmax_beam)
+        if beam_pol is not None: self.beam_pol[:len(beam_pol)] = self.beam_pol
 
     def extract_and_filter_CAR(self, kx, ky, kspace_apo, legacy_steve, unpixwin):
         """Extract and filter this initialized CAR namap.
@@ -249,24 +280,26 @@ class namap:
         See constructor for parameters.
         """
         # extract to common shape and wcs
-        self.map_I = enmap.extract(self.map_I, self.shape, self.wcs)
+        if self.has_temp:
+            self.map_I = enmap.extract(self.map_I, self.shape, self.wcs)
+            self.mask_temp = enmap.extract(self.mask, self.shape, self.wcs)
 
-        if self.pol:
+        if self.has_pol:
             self.map_Q = enmap.extract(self.map_Q, self.shape, self.wcs)
             self.map_U = enmap.extract(self.map_U, self.shape, self.wcs)
             self.mask_pol = enmap.extract(self.mask_pol, self.shape, self.wcs)
 
-        self.mask = enmap.extract(self.mask, self.shape, self.wcs)
+        apo = maputils.get_steve_apo(self.shape, self.wcs, kspace_apo)
 
         # k-space filter step (also correct for pixel window here!)
-        apo = maputils.get_steve_apo(self.shape, self.wcs, kspace_apo)
-        self.mask *= apo  # multiply the apodized taper into your mask
+        if self.has_temp:
+            self.mask_temp *= apo  # multiply the apodized taper into your mask
+            self.map_I = maputils.kfilter_map(
+                self.map_I, apo, kx, ky, unpixwin=unpixwin,
+                legacy_steve=legacy_steve)
 
-        self.map_I = maputils.kfilter_map(
-            self.map_I, apo, kx, ky, unpixwin=unpixwin,
-            legacy_steve=legacy_steve)
-
-        if self.pol:
+        if self.has_pol:
+            self.mask_pol *= apo  # multiply the apodized taper into your mask
             self.map_Q = maputils.kfilter_map(
                 self.map_Q, apo, kx, ky, unpixwin=unpixwin,
                 legacy_steve=legacy_steve)
@@ -274,9 +307,9 @@ class namap:
                 self.map_U, apo, kx, ky, unpixwin=unpixwin,
                 legacy_steve=legacy_steve)
 
-            
 
-            
+
+
 
 class mode_coupling:
     r"""Wrapper around the NaMaster workspace object.
@@ -299,24 +332,28 @@ class mode_coupling:
         bins: pymaster NmtBin object
             We generate binned mode coupling matrices with this NaMaster binning
             object.
-            
+
         mcm_dir: string
             Specify a directory which contains the workspace files for this mode-
             coupling object.
         """
-        
+
         if mcm_dir is not None:
             self.load_from_dir(mcm_dir)
         else:
             self.bins = bins
             self.lb = bins.get_effective_ells()
 
-            self.w00 = nmt.NmtWorkspace()
-            self.w00.compute_coupling_matrix(namap1.field_spin0, namap2.field_spin0,
-                                             bins, n_iter=0)
+            self.has_temp = namap1.has_temp and namap2.has_temp
+            self.has_pol = namap1.has_pol and namap2.has_pol
 
-            if namap1.pol and namap2.pol:
-                self.pol = True
+            # compute whichever mode coupling matrices we have data for
+            if self.has_temp:
+                self.w00 = nmt.NmtWorkspace()
+                self.w00.compute_coupling_matrix(namap1.field_spin0, namap2.field_spin0,
+                                                 bins, n_iter=0)
+
+            if self.has_temp and self.has_pol:
                 self.w02 = nmt.NmtWorkspace()
                 self.w02.compute_coupling_matrix(
                     namap1.field_spin0, namap2.field_spin2,
@@ -325,35 +362,41 @@ class mode_coupling:
                 self.w20.compute_coupling_matrix(
                     namap1.field_spin2, namap2.field_spin0,
                     bins, n_iter=0)
+
+            if self.has_pol:
                 self.w22 = nmt.NmtWorkspace()
                 self.w22.compute_coupling_matrix(
                     namap1.field_spin2, namap2.field_spin2,
                     bins, n_iter=0)
-            else:
-                self.pol = False
-                
+
     def load_from_dir(self, mcm_dir):
         """Read information from a nawrapper mode coupling directory."""
         with open(f'{mcm_dir}/mcm.json', 'r') as read_file:
             data = (json.load(read_file))
             self.bins = read_bins(data['binfile'])
             self.lb = self.bins.get_effective_ells()
-            self.w00 = nmt.NmtWorkspace()
-            self.w00.read_from(data['w00'])
-            self.pol = data['pol']
-            
-            if self.pol:
+
+            self.has_temp = data['has_temp']
+            self.has_pol = data['has_pol']
+
+            if self.has_temp:
+                self.w00 = nmt.NmtWorkspace()
+                self.w00.read_from(data['w00'])
+
+            if self.has_temp and self.has_pol:
                 self.w02 = nmt.NmtWorkspace()
                 self.w02.read_from(data['w02'])
                 self.w20 = nmt.NmtWorkspace()
                 self.w20.read_from(data['w20'])
+
+            if self.has_pol:
                 self.w22 = nmt.NmtWorkspace()
                 self.w22.read_from(data['w22'])
-    
+
     def write_to_dir(self, mcm_dir):
         # create directory
         pathlib.Path(mcm_dir).mkdir(parents=True, exist_ok=True)
-        
+
         # extract bin kwargs
         lmax = self.bins.lmax
         bpws_copy = -np.ones(lmax+1).astype(int)
@@ -362,23 +405,27 @@ class mode_coupling:
         for i in range(len(l_eff)):
             bpws_copy[self.bins.get_ell_list(i)] = i
             weights_copy[self.bins.get_ell_list(i)] = self.bins.get_weight_list(i)
-        
+
         # basic json
         data = {
-            'pol': self.pol,
-            'w00': 'w00.bin'
+            'has_temp': self.has_temp,
+            'has_pol': self.has_pol
         }
-        
+
         # write binaries
-        self.w00.write_to(f'{mcm_dir}/w00.bin')
-        
-        if self.pol:
+        if self.has_temp:
+            self.w00.write_to(f'{mcm_dir}/w00.bin')
+            data.update({'w00': 'w00.bin'})
+
+        if self.has_temp and self.has_pol:
             self.w02.write_to(f'{mcm_dir}/w02.bin')
             self.w20.write_to(f'{mcm_dir}/w20.bin')
+            data.update({'w02': 'w02.bin', 'w20': 'w20.bin'})
+
+        if self.has_pol:
             self.w22.write_to(f'{mcm_dir}/w22.bin')
-            # add pol entries to json if necessary
-            data.update({'w02': 'w02.bin', 'w20': 'w20.bin', 'w22': 'w22.bin'})
-        
+            data.update({'w22': 'w22.bin'})
+
         # write bin kwargs
         data['bin_kwargs'] = {
             'nside' : 2048,
@@ -387,11 +434,11 @@ class mode_coupling:
             'bpws' : bpws_copy.tolist(),
             'weights' : weights_copy.tolist()
         }
-            
+
         with open(f'{mcm_dir}/mcm.json', 'w') as write_file:
             json.dump(data, write_file)
-    
-    
+
+
     def compute_master(self, f_a, f_b, wsp):
         """Compute mode-coupling-corrected spectra.
 
