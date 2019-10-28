@@ -8,7 +8,7 @@ import nawrapper.maputils as maputils
 import json
 import pathlib
 
-def compute_spectra(namap1, namap2, bins=None, mc=None):
+def compute_spectra(namap1, namap2, bins=None, mc=None, lmax=None, verbose=True):
     r"""Compute all of the spectra between two maps.
 
     This computes all cross spectra between two :py:class:`nawrapper.ps.namap`
@@ -38,9 +38,15 @@ def compute_spectra(namap1, namap2, bins=None, mc=None):
         as dictionary keys. This also contains the bin centers as key 'ell'.
 
     """
-    if bins is None and mc is None:
+    
+    
+    if bins is None and mc is None and lmax is None:
         raise ValueError(
-            "You must specify either a binning or a mode coupling object.")
+            "You must specify either a binning, lmax, or a mode coupling object.")
+        
+    if lmax is not None and bins is None and mc is None:
+        if verbose: print("Assuming unbinned and computing the mode coupling matrix.")
+        bins = get_unbinned_bins(lmax) # will choose lmax, nside ignored
 
     if mc is None:
         mc = mode_coupling(namap1, namap2, bins)
@@ -175,8 +181,6 @@ class namap:
             self.mode = 'car'
         else:
             self.mode = 'healpix'
-
-        if verbose: print()
         
         self.has_temp = (map_I is not None)
         self.has_pol = (map_Q is not None) and (map_U is not None)
@@ -210,7 +214,7 @@ class namap:
         else:
             self.__initialize_hp_map(
                 map_I=map_I, map_Q=map_Q, map_U=map_U,
-                mask_temp=map_temp, mask_pol=mask_pol,
+                mask_temp=mask_temp, mask_pol=mask_pol,
                 beam_temp=beam_temp, beam_pol=beam_pol,
                 unpixwin=unpixwin,
                 nside=nside, sub_monopole=sub_monopole, sub_dipole=sub_dipole,
@@ -224,8 +228,8 @@ class namap:
             kx, ky, kspace_apo, legacy_steve, verbose):
 
         if wcs is None:  # inherit the mask's shape and WCS if not specified
-            shape = mask.shape
-            wcs = mask.wcs
+            shape = mask_temp.shape
+            wcs = mask_temp.wcs
         self.shape = shape
         self.wcs = wcs
         self.lmax_beam = int(180.0/abs(np.min(self.wcs.wcs.cdelt))) + 1
@@ -258,24 +262,38 @@ class namap:
         self.nside = nside
         self.lmax_beam = 3 * nside
         self.set_beam(beam_temp, beam_pol, verbose=verbose)
-        pixwin_T, pixwin_P = hp.sphtfunc.pixwin(self.nside, pol=True)
-        if unpixwin:  # apply healpix pixel window
-            self.beam_temp *= pixwin_T[:len(self.beam_temp)]
-            self.beam_pol *= pixwin_P[:len(self.beam_pol)]
+        self.pixwin_T, self.pixwin_P = hp.sphtfunc.pixwin(self.nside, pol=True)
+        if verbose: print("Multiplying beam with healpix pixel window function.")
+        if self.has_temp: self.pixwin_T = self.pixwin_T[:len(self.beam_temp)]
+        if self.has_pol: self.pixwin_P = self.pixwin_P[:len(self.beam_pol)]
+        
         if sub_monopole:  # subtract TT monopole and dipole
+            if verbose: 
+                if sub_dipole: print("Subtracting monopole and dipole from temperature map.")
+                else: print("Subtracting monopole from temperature map.")
             self.map_I = maputils.sub_mono_di(self.map_I, self.mask_temp,
                                               nside, sub_dipole)
-
+        
+#         if unpixwin:
+#             if self.has_temp: self.beam_temp *= self.pixwin_T
+#             if self.has_pol: self.beam_pol *= self.pixwin_P
+        if self.has_temp: 
+            beam_temp = self.beam_temp.copy()
+            if unpixwin: beam_temp *= self.pixwin_T
+        if self.has_pol: 
+            beam_pol = self.beam_pol.copy()
+            if unpixwin: beam_pol *= self.pixwin_P
+        
         # construct the a_lm of the maps, depending on what data is available
         if verbose: print("Computing spherical harmonics.\n")
         if self.has_temp:
             self.field_spin0 = nmt.NmtField(
                 self.mask_temp, [self.map_I],
-                beam=self.beam_temp, n_iter=0)
+                beam=beam_temp, n_iter=0)
         if self.has_pol:
             self.field_spin2 = nmt.NmtField(
                 self.mask_pol, [self.map_Q, self.map_U],
-                beam=self.beam_pol, n_iter=0)
+                beam=beam_pol, n_iter=0)
 
     def set_beam(self, beam_temp, beam_pol, apply_healpix_window=False, verbose=False):
         """Set and extend the object's beam up to lmax."""
@@ -369,6 +387,10 @@ class mode_coupling:
         else:
             self.bins = bins
             self.lb = bins.get_effective_ells()
+            
+            if namap1.mode != namap2.mode: 
+                raise ValueError(
+                    f"pixel types m1:{namap1.mode}, m2:{namap2.mode} incompatible")
 
             self.has_temp = namap1.has_temp and namap2.has_temp
             self.has_pol = namap1.has_pol and namap2.has_pol
@@ -599,7 +621,7 @@ def bin_spec_dict(Cb, binleft, binright, lmax):
         ell_sub_list = [np.arange(l, r) for (l, r) in zip(binleft, binright+1)]
         lb = np.array([np.sum(ell_sub) / len(ell_sub) for ell_sub in ell_sub_list])
         cl_from_zero = np.zeros(lmax + 1)
-        cl_from_zero[Cb['ell'].astype(int)] = Cb[spec_key] * 1e12
+        cl_from_zero[Cb['ell'].astype(int)] = Cb[spec_key]
         weights = np.arange(lmax + 1) * (np.arange(lmax + 1) + 1)
         result[spec_key] = np.array(
             [np.sum((weights * cl_from_zero)[ell_sub]) /

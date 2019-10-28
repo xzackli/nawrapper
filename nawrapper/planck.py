@@ -14,7 +14,6 @@ param_2018 = {
     'lmax' : 2508
 }
 
-
 def load_planck_data(base_data_dir, par=param_2018, 
                      freq1='143', freq2='143', split1='1', split2='2'):
     
