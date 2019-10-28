@@ -40,8 +40,6 @@ class nacov:
         self.cw22 = nmt.NmtCovarianceWorkspace()
         
         self.num_ell = len(self.mc.bins.get_effective_ells())
-        # This is the time-consuming operation. You need to redo this for
-        # every combination of masks. For ACT this is basically every time.
         
         self.Cl12 = power.compute_spectra(namap1, namap2, mc=mc)
         self.Cl11 = power.compute_spectra(namap1, namap1, mc=mc)
@@ -68,14 +66,21 @@ class nacov:
                     mc.lb, self.Cl12[XY], 
                     smoothing_window, smoothing_polyorder)
             if XY not in self.noise.keys():
-                self.noise[XY] = self.smooth_and_interpolate(
-                    mc.lb, (self.Cl11[XY] + self.Cl22[XY])/2.0, 
+                self.noise[XY + '_1'] = self.smooth_and_interpolate(
+                    mc.lb, self.Cl11[XY], 
                     smoothing_window, smoothing_polyorder) - self.signal[XY]
-                self.noise[XY] = np.maximum(self.noise[XY], 0.0)
+                self.noise[f'{XY}_2'] = self.smooth_and_interpolate(
+                    mc.lb, self.Cl22[XY], 
+                    smoothing_window, smoothing_polyorder) - self.signal[XY]
+                
+                self.noise[f'{XY}_1'] = np.maximum(self.noise[XY + '_1'], 0.0)
+                self.noise[f'{XY}_2'] = np.maximum(self.noise[XY + '_2'], 0.0)
         
         
         
     def compute(self):
+        # This is the time-consuming operation. You need to redo this for
+        # every combination of masks. For ACT this is basically every time.
         
         namap1, namap2, mc = self.namap1, self.namap2, self.mc
         
@@ -91,10 +96,10 @@ class nacov:
             covar_00_00 = nmt.gaussian_covariance(
                 self.cw00,
                 0, 0, 0, 0,  # Spins of the 4 fields
-                [(self.signal['TT'] + self.noise['TT']) * beam_tt],  # TT
+                [(self.signal['TT'] + self.noise['TT_1']) * beam_tt],  # TT
                 [self.signal['TT'] * beam_tt],  # TT
                 [self.signal['TT'] * beam_tt],  # TT
-                [(self.signal['TT'] + self.noise['TT']) * beam_tt],  # TT
+                [(self.signal['TT'] + self.noise['TT_2']) * beam_tt],  # TT
                 mc.w00, wb=mc.w00).reshape([self.num_ell, 1,
                                             self.num_ell, 1])
             self.covar_TT_TT = covar_00_00[:, 0, :, 0]
@@ -106,17 +111,18 @@ class nacov:
                 namap1.field_spin2, namap2.field_spin2, 
                 lmax=self.lmax)
 
-            beam_ee = (namap1.beam_pol * namap2.beam_pol)[:self.lmax+1]
+            beam_ee = (namap1.beam_pol * namap2.beam_pol *
+                       namap1.pixwin_P * namap2.pixwin_P)[:self.lmax+1]
             covar_22_22 = nmt.gaussian_covariance(
                 self.cw22, 2, 2, 2, 2,  # Spins of the 4 fields
-                [(self.signal['EE']+self.noise['EE']) * beam_ee, (self.signal['EB']) * beam_ee,
-                 (self.signal['EB']) * beam_ee, (self.signal['BB']+self.noise['BB']) * beam_ee],  # EE, EB, BE, BB
+                [(self.signal['EE']+self.noise['EE_1']) * beam_ee, (self.signal['EB']) * beam_ee,
+                 (self.signal['EB']) * beam_ee, (self.signal['BB']+self.noise['BB_1']) * beam_ee],  # EE, EB, BE, BB
                 [(self.signal['EE']) * beam_ee, (self.signal['EB']) * beam_ee,
                  (self.signal['EB']) * beam_ee, (self.signal['EB']) * beam_ee],  # EE, EB, BE, BB
                 [(self.signal['EE']) * beam_ee, (self.signal['EB']) * beam_ee,
                  (self.signal['EB']) * beam_ee, (self.signal['EB']) * beam_ee],  # EE, EB, BE, BB
-                [(self.signal['EE']+self.noise['EE']) * beam_ee, (self.signal['EB']) * beam_ee,
-                 (self.signal['EB']) * beam_ee, (self.signal['BB']+self.noise['BB']) * beam_ee],  # EE, EB, BE, BB
+                [(self.signal['EE']+self.noise['EE_1']) * beam_ee, (self.signal['EB']) * beam_ee,
+                 (self.signal['EB']) * beam_ee, (self.signal['BB']+self.noise['BB_2']) * beam_ee],  # EE, EB, BE, BB
                 mc.w22, wb=mc.w22).reshape([self.num_ell, 4,
                                       self.num_ell, 4])
 
