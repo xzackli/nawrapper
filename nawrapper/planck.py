@@ -1,9 +1,10 @@
 """Utility functions for processing Planck maps into spectra."""
-
+from __future__ import print_function
 from astropy.io import fits
 import healpy as hp
 import numpy as np
 import nawrapper as nw
+import os
 
 param_2018 = {
     'pol_efficiency' : {'100' : 0.9995, '143' : 0.999, '217' : 0.999},
@@ -24,44 +25,42 @@ def load_planck_data(base_data_dir, par=param_2018,
     # beams are only available as f1 x f2 with f1 \leq f2
     # splits are only 1 x 1, 1 x 2, 2 x 2 (i.e. no 2 x 1)
 
-    base_data_dir = pathlib.Path(base_data_dir)
-    beam_dir = base_data_dir / beam_dir
-    map_dir = base_data_dir / map_dir
-    mask_dir = base_data_dir / mask_dir
+    beam_dir = os.path.join(base_data_dir, beam_dir)
+    map_dir = os.path.join(base_data_dir, map_dir)
+    mask_dir = os.path.join(base_data_dir, mask_dir)
 
     if int(freq1) < int(freq2):
-        beam_Wl_hdu = fits.open(beam_dir / 'Wl_R3.01_plikmask_' + 
-            freq1 + 'hm' + split1 + 'x' + freq2 + 'hm' + split2 + '.fits')
+        beam_Wl_hdu = fits.open(
+            os.path.join(beam_dir, 'Wl_R3.01_plikmask_' + 
+                freq1 + 'hm' + split1 + 'x' + freq2 + 'hm' + split2 + '.fits'))
     elif int(freq1) > int(freq2):
-        beam_Wl_hdu = fits.open(beam_dir /
-            ('/Wl_R3.01_plikmask_' + 
-                freq2+'hm'+split2+'x'+freq1+'hm'+split1+'.fits'))
+        beam_Wl_hdu = fits.open(
+            os.path.join(beam_dir, ('/Wl_R3.01_plikmask_' + 
+                freq2+'hm'+split2+'x'+freq1+'hm'+split1+'.fits')))
     else: # they are equal
         if int(split1) > int(split2):
-            beam_Wl_hdu = fits.open(beam_dir /
-                ('Wl_R3.01_plikmask_' +
-                    freq2+'hm'+split2+'x'+freq1+'hm'+split1+'.fits'))
+            beam_Wl_hdu = fits.open(os.path.join(beam_dir, ('Wl_R3.01_plikmask_' +
+                freq2+'hm'+split2+'x'+freq1+'hm'+split1+'.fits')))
         else:
-            beam_Wl_hdu = fits.open(beam_dir /
-                ('Wl_R3.01_plikmask_' +
-                    freq1+'hm'+split1+'x'+freq2+'hm'+split2+'.fits'))
+            beam_Wl_hdu = fits.open(os.path.join(beam_dir, ('Wl_R3.01_plikmask_' + 
+                freq1+'hm'+split1+'x'+freq2+'hm'+split2+'.fits')))
     
     beam_temp = np.sqrt(beam_Wl_hdu[1].data['TT_2_TT'][0])
     beam_pol = np.sqrt(beam_Wl_hdu[2].data['EE_2_EE'][0])
     
-    mfile_1 = map_dir / ('HFI_SkyMap_'+freq1+
+    mfile_1 = map_dir + ('HFI_SkyMap_'+freq1+
             '_2048_R3.01_halfmission-'+split1+'.fits')
-    mfile_2 = map_dir / ('HFI_SkyMap_'+freq2+ \
+    mfile_2 = map_dir + ('HFI_SkyMap_'+freq2+ 
             '_2048_R3.01_halfmission-'+split2+'.fits')
 
-    maskfile1 = mask_dir / \
-        ('COM_Mask_Likelihood-temperature-'+freq1+'-hm'+split1+'_2048_R3.00.fits')
-    maskfile2 = '{base_data_dir}/{mask_dir}/' + \
-        ('COM_Mask_Likelihood-temperature-'+freq2+'-hm'+split2+'_2048_R3.00.fits')
-    maskfile1_pol = mask_dir / \
-        ('COM_Mask_Likelihood-polarization-'+freq1+'-hm'+split1+'_2048_R3.00.fits')
-    maskfile2_pol = mask_dir / \
-        ('COM_Mask_Likelihood-polarization-'+freq2+'-hm'+split2+'_2048_R3.00.fits')
+    maskfile1 = os.path.join(mask_dir, 
+        ('/COM_Mask_Likelihood-temperature-'+freq1+'-hm'+split1+'_2048_R3.00.fits'))
+    maskfile2 = os.path.join(mask_dir, 
+        ('/COM_Mask_Likelihood-temperature-'+freq2+'-hm'+split2+'_2048_R3.00.fits'))
+    maskfile1_pol = os.path.join(mask_dir, 
+        ('/COM_Mask_Likelihood-polarization-'+freq1+'-hm'+split1+'_2048_R3.00.fits'))
+    maskfile2_pol = os.path.join(mask_dir, 
+        ('/COM_Mask_Likelihood-polarization-'+freq2+'-hm'+split2+'_2048_R3.00.fits'))
     
     # read maps
     pol_fac_1 = par['pol_efficiency'][freq1]

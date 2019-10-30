@@ -1,6 +1,6 @@
 """Example script, copy of the quickstart in the documentation."""
 
-import nawrapper.power as nw
+import nawrapper as nw
 import numpy as np
 import matplotlib.pyplot as plt
 from pixell import enmap
@@ -47,8 +47,8 @@ noise_map_2 = enmap.rand_map(shape, wcs, nl[np.newaxis, np.newaxis])
 # plt.yscale('log')
 # plt.legend()
 
-namap_1 = nw.namap(map_I=imap + noise_map_1, mask=mask)
-namap_2 = nw.namap(map_I=imap + noise_map_2, mask=mask)
+namap_1 = nw.namap(map_I=imap + noise_map_1, mask_temp=mask)
+namap_2 = nw.namap(map_I=imap + noise_map_2, mask_temp=mask)
 
 binfile = '../notebooks/data/BIN_ACTPOL_50_4_SC_low_ell'
 bins = nw.read_bins(binfile)

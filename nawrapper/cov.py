@@ -1,5 +1,5 @@
 """Power spectrum objects and utilities."""
-
+from __future__ import print_function
 import pymaster as nmt
 import healpy as hp
 import numpy as np

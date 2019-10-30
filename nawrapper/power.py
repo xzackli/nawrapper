@@ -1,12 +1,12 @@
 """Power spectrum objects and utilities."""
-
+from __future__ import print_function
 import pymaster as nmt
 import healpy as hp
 import numpy as np
 from pixell import enmap
 import nawrapper.maputils as maputils
 import json
-import pathlib
+import os
 
 def compute_spectra(namap1, namap2, bins=None, mc=None, lmax=None, verbose=True):
     r"""Compute all of the spectra between two maps.
@@ -185,9 +185,9 @@ class namap:
         self.has_temp = (map_I is not None)
         self.has_pol = (map_Q is not None) and (map_U is not None)
         
-        if verbose: print('Creating a ' + self.mode + ' map. ' + 
-                          'temperature: ' + self.has_temp + 
-                          ', polarization: ' + self.has_pol)
+        if verbose: print(
+            'Creating a %s map. temperature: %s, polarization: %s' % 
+            (self.mode, self.has_temp, self.has_pol))
 
         if ((map_Q is None and map_U is not None) or
                 (map_Q is not None and map_U is None)):
@@ -322,8 +322,9 @@ class namap:
 
         See constructor for parameters.
         """
-        if verbose: print('Applying a k-space filter (kx='+kx+', ky='+ky+
-            ', apo=' + kspace_apo + '), unpixwin: ' + unpixwin)
+        if verbose: print(
+            ('Applying a k-space filter (kx=%s, ky=%s' % (kx, ky)) +
+            ', apo=%s), unpixwin: %s' % (kspace_apo, unpixwin))
         # extract to common shape and wcs
         if self.has_temp:
             self.map_I = enmap.extract(self.map_I, self.shape, self.wcs)
@@ -391,7 +392,8 @@ class mode_coupling:
             
             if namap1.mode != namap2.mode: 
                 raise ValueError(
-                    'pixel types m1:'+namap1.mode+', m2:'+namap2.mode+' incompatible')
+                    'pixel types m1:%s, m2:%s incompatible' % 
+                    (namap1.mode, namap2.mode))
 
             self.has_temp = namap1.has_temp and namap2.has_temp
             self.has_pol = namap1.has_pol and namap2.has_pol
@@ -420,7 +422,7 @@ class mode_coupling:
 
     def load_from_dir(self, mcm_dir):
         """Read information from a nawrapper mode coupling directory."""
-        with open(str(pathlib.Path(mcm_dir)/'mcm.json'), 'r') as read_file:
+        with open(os.path.join(mcm_dir,'mcm.json'), 'r') as read_file:
             data = (json.load(read_file))
             
             # convert lists into numpy arrays
@@ -434,17 +436,17 @@ class mode_coupling:
 
             if self.has_temp:
                 self.w00 = nmt.NmtWorkspace()
-                self.w00.read_from(str(pathlib.Path(mcm_dir) / data['w00']))
+                self.w00.read_from(os.path.join(mcm_dir, data['w00']))
 
             if self.has_temp and self.has_pol:
                 self.w02 = nmt.NmtWorkspace()
-                self.w02.read_from(str(pathlib.Path(mcm_dir) / data['w02']))
+                self.w02.read_from(os.path.join(mcm_dir, data['w02']))
                 self.w20 = nmt.NmtWorkspace()
-                self.w20.read_from(str(pathlib.Path(mcm_dir) / data['w20']))
+                self.w20.read_from(os.path.join(mcm_dir, data['w20']))
 
             if self.has_pol:
                 self.w22 = nmt.NmtWorkspace()
-                self.w22.read_from(str(pathlib.Path(mcm_dir) / data['w22']))
+                self.w22.read_from(os.path.join(mcm_dir, data['w22']))
 
     def write_to_dir(self, mcm_dir):
         # create directory
@@ -471,12 +473,12 @@ class mode_coupling:
             data.update({'w00': 'w00.bin'})
 
         if self.has_temp and self.has_pol:
-            self.w02.write_to(str(pathlib.Path(mcm_dir)/'w02.bin'))
-            self.w20.write_to(str(pathlib.Path(mcm_dir)/'w20.bin'))
+            self.w02.write_to(os.path.join(mcm_dir, data['w02']))
+            self.w20.write_to(os.path.join(mcm_dir, data['w20']))
             data.update({'w02': 'w02.bin', 'w20': 'w20.bin'})
 
         if self.has_pol:
-            self.w22.write_to(str(pathlib.Path(mcm_dir)/'w22.bin'))
+            self.w22.write_to(os.path.join(mcm_dir, data['w22']))
             data.update({'w22': 'w22.bin'})
 
         # write bin kwargs
@@ -488,7 +490,7 @@ class mode_coupling:
             'weights' : weights_copy.tolist()
         }
 
-        with open(str(pathlib.Path(mcm_dir)/'mcm.json'), 'w') as write_file:
+        with open(os.path.join(mcm_dir,'mcm.json'), 'w') as write_file:
             json.dump(data, write_file)
 
 
