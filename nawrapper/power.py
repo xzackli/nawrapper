@@ -185,8 +185,9 @@ class namap:
         self.has_temp = (map_I is not None)
         self.has_pol = (map_Q is not None) and (map_U is not None)
         
-        if verbose: print(f'Creating a {self.mode} map. ' + 
-                          f'(temperature: {self.has_temp}, polarization: {self.has_pol})')
+        if verbose: print('Creating a ' + self.mode + ' map. ' + 
+                          'temperature: ' + self.has_temp + 
+                          ', polarization: ' + self.has_pol)
 
         if ((map_Q is None and map_U is not None) or
                 (map_Q is not None and map_U is None)):
@@ -197,10 +198,10 @@ class namap:
         # set masks = 1 if not specified.
         if self.has_temp and self.mask_temp is None:
             self.mask_temp = self.map_I * 0.0 + 1.0
-            if verbose: print(f'mask_temp not specified, setting temperature mask to one.')
+            if verbose: print('mask_temp not specified, setting temperature mask to one.')
         if self.has_pol and self.mask_pol is None:
             self.mask_pol = self.map_Q * 0.0 + 1.0
-            if verbose: print(f'mask_pol not specified, setting polarization mask to one.')
+            if verbose: print('mask_pol not specified, setting polarization mask to one.')
 
         # branch here based on CAR or healpix
         if self.mode == 'car':
@@ -237,7 +238,7 @@ class namap:
         # needed to reproduce steve's spectra
         if legacy_steve:
             self.map_I.wcs.wcs.crpix += np.array([-1, -1])
-            if verbose: print(f'Applying legacy_steve correction.')
+            if verbose: print('Applying legacy_steve correction.')
         self.set_beam(beam_temp, beam_pol, verbose=verbose)
         self.extract_and_filter_CAR(kx, ky, kspace_apo,
                                     legacy_steve, unpixwin, verbose=verbose)
@@ -321,8 +322,8 @@ class namap:
 
         See constructor for parameters.
         """
-        if verbose: print(f'Applying a k-space filter (kx={kx}, ky={ky}, apo={kspace_apo})' + 
-                         f', unpixwin: {unpixwin}')
+        if verbose: print('Applying a k-space filter (kx='+kx+', ky='+ky+
+            ', apo=' + kspace_apo + '), unpixwin: ' + unpixwin)
         # extract to common shape and wcs
         if self.has_temp:
             self.map_I = enmap.extract(self.map_I, self.shape, self.wcs)
@@ -390,7 +391,7 @@ class mode_coupling:
             
             if namap1.mode != namap2.mode: 
                 raise ValueError(
-                    f"pixel types m1:{namap1.mode}, m2:{namap2.mode} incompatible")
+                    'pixel types m1:'+namap1.mode+', m2:'+namap2.mode+' incompatible')
 
             self.has_temp = namap1.has_temp and namap2.has_temp
             self.has_pol = namap1.has_pol and namap2.has_pol
@@ -419,7 +420,7 @@ class mode_coupling:
 
     def load_from_dir(self, mcm_dir):
         """Read information from a nawrapper mode coupling directory."""
-        with open(f'{mcm_dir}/mcm.json', 'r') as read_file:
+        with open(str(pathlib.Path(mcm_dir)/'mcm.json'), 'r') as read_file:
             data = (json.load(read_file))
             
             # convert lists into numpy arrays
@@ -433,17 +434,17 @@ class mode_coupling:
 
             if self.has_temp:
                 self.w00 = nmt.NmtWorkspace()
-                self.w00.read_from(mcm_dir + '/' + data['w00'])
+                self.w00.read_from(str(pathlib.Path(mcm_dir) / data['w00']))
 
             if self.has_temp and self.has_pol:
                 self.w02 = nmt.NmtWorkspace()
-                self.w02.read_from(mcm_dir + '/' + data['w02'])
+                self.w02.read_from(str(pathlib.Path(mcm_dir) / data['w02']))
                 self.w20 = nmt.NmtWorkspace()
-                self.w20.read_from(mcm_dir + '/' + data['w20'])
+                self.w20.read_from(str(pathlib.Path(mcm_dir) / data['w20']))
 
             if self.has_pol:
                 self.w22 = nmt.NmtWorkspace()
-                self.w22.read_from(mcm_dir + '/' + data['w22'])
+                self.w22.read_from(str(pathlib.Path(mcm_dir) / data['w22']))
 
     def write_to_dir(self, mcm_dir):
         # create directory
@@ -466,16 +467,16 @@ class mode_coupling:
 
         # write binaries
         if self.has_temp:
-            self.w00.write_to(f'{mcm_dir}/w00.bin')
+            self.w00.write_to(mcm_dir+'/w00.bin')
             data.update({'w00': 'w00.bin'})
 
         if self.has_temp and self.has_pol:
-            self.w02.write_to(f'{mcm_dir}/w02.bin')
-            self.w20.write_to(f'{mcm_dir}/w20.bin')
+            self.w02.write_to(str(pathlib.Path(mcm_dir)/'w02.bin'))
+            self.w20.write_to(str(pathlib.Path(mcm_dir)/'w20.bin'))
             data.update({'w02': 'w02.bin', 'w20': 'w20.bin'})
 
         if self.has_pol:
-            self.w22.write_to(f'{mcm_dir}/w22.bin')
+            self.w22.write_to(str(pathlib.Path(mcm_dir)/'w22.bin'))
             data.update({'w22': 'w22.bin'})
 
         # write bin kwargs
@@ -487,7 +488,7 @@ class mode_coupling:
             'weights' : weights_copy.tolist()
         }
 
-        with open(f'{mcm_dir}/mcm.json', 'w') as write_file:
+        with open(str(pathlib.Path(mcm_dir)/'mcm.json'), 'w') as write_file:
             json.dump(data, write_file)
 
 

@@ -59,7 +59,10 @@ class nacov:
         spec_list = []
         if namap1.has_temp and namap2.has_temp: spec_list += ['TT']
         if namap1.has_pol and namap2.has_pol: spec_list += ['EE', 'BB']
+        if namap1.has_temp and namap2.has_pol: spec_list += ['TE']
+        if namap1.has_pol and namap2.has_temp: spec_list += ['ET']
             
+        
         for XY in spec_list:
             if XY not in self.signal.keys():
                 self.signal[XY] = self.smooth_and_interpolate(
@@ -69,14 +72,17 @@ class nacov:
                 self.noise[XY + '_1'] = self.smooth_and_interpolate(
                     mc.lb, self.Cl11[XY], 
                     smoothing_window, smoothing_polyorder) - self.signal[XY]
-                self.noise[f'{XY}_2'] = self.smooth_and_interpolate(
+                self.noise[XY + '_2'] = self.smooth_and_interpolate(
                     mc.lb, self.Cl22[XY], 
                     smoothing_window, smoothing_polyorder) - self.signal[XY]
                 
-                self.noise[f'{XY}_1'] = np.maximum(self.noise[XY + '_1'], 0.0)
-                self.noise[f'{XY}_2'] = np.maximum(self.noise[XY + '_2'], 0.0)
+                self.noise[XY + '_1'] = np.maximum(self.noise[XY + '_1'], 0.0)
+                self.noise[XY + '_2'] = np.maximum(self.noise[XY + '_2'], 0.0)
         
-        
+        if 'EE' in self.signal and 'EB' not in self.signal:
+            print("setting EB = 0")
+            self.signal['EB'] = 0.0 * self.signal['EE']
+            self.noise['EB'] = 0.0 * self.noise['EE_1']
         
     def compute(self):
         # This is the time-consuming operation. You need to redo this for
