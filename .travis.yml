@@ -42,12 +42,12 @@ addons:
 script:
   - nosetests --with-coverage
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      travis-sphinx build
+      travis-sphinx build;
     fi
 
 # Push the results back to codecov
 after_success:
   - codecov
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      travis-sphinx deploy
+      travis-sphinx deploy;
     fi
