@@ -40,7 +40,7 @@ addons:
 
 # Your test script goes here
 script:
-  - nosetests --with-coverage
+  - nosetests --with-coverage test/
   - if [[ "$TRAVIS_PYTHON_VERSION" != "2.7" ]]; then
       travis-sphinx build;
     fi

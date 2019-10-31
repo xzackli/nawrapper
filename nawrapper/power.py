@@ -83,36 +83,15 @@ def compute_spectra(namap1, namap2, bins=None, mc=None, lmax=None, verbose=True)
 class namap:
     """Object for organizing map products."""
 
-    def __init__(self,
-                 # map
-                 map_I=None, map_Q=None, map_U=None,
-                 # beam
-                 beam_temp=None, beam_pol=None,
-                 # mask
-                 mask_temp=None, mask_pol=None,
-                 # CAR specific parameters
-                 shape=None, wcs=None,
-                 kx=0, ky=0, kspace_apo=40,
-                 legacy_steve=False,
-                 # healpix specific parameters
-                 nside=None,
-                 # correction options
-                 unpixwin=True,
-                 sub_monopole=False, sub_dipole=False,
-                 # verbosity
-                 verbose=True
-                 ):
+    def __init__(self, maps, masks=None, beams=None, unpixwin=True, verbose=True):
         r"""Create a new namap.
 
         This object organizes the various ingredients that are required for a
         map to be used in power spectra analysis. Each map has an associated
 
-        1. I (optional QU) map
+        1. IQU maps
         2. mask, referring to the product of hits, point source mask, etc.
         3. beam transfer function
-
-        This object also does k-space filtering upon creation, to avoid
-        having to compute the spherical harmonics of the map multiple times.
 
         By default, we do not reproduce the output of Steve's code. We do offer
         this functionality: set the optional flag `legacy_steve=True` to offset
@@ -121,63 +100,58 @@ class namap:
         In general, your mask should already have the edges tapered, so this
         will not change your results significantly.
 
-        This objects defaults to CAR maps. You can instead use healpix maps
-        by specifying an `nside`. Pass in IQU maps and masks as
-        numpy arrays, and don't use the CAR specific parameters (
-        `shape`, `wcs`, and the k-space filtering options). **You cannot compute
-        spectra between a CAR and a healpix map.** If this is your goal, convert
-        both maps to one pixelization first.
-
         Parameters
         ----------
-        map_I : pixell.enmap
-            The intensity map you want to operate on.
-        map_Q : pixell.enmap
-            The Stokes Q map you want to operate on.
-        map_I : pixell.enmap
-            The Stokes U map you want to operate on.
-
-        mask_temp : pixell.enmap
-            The mask for the map in intensity.
-        mask_pol : pixell.enmap
-            The mask for the map in polarization.
-
-        beam_temp: 1D numpy array
-            Beam transfer function :math:`B_{\ell}`.
-        beam_pol: 1D numpy array
-            Beam transfer function :math:`B_{\ell}`.
-
-        sub_monopole : bool
-            Turn on to fit and remove the monopole from the I map. Only for
-            healpix.
-        sub_dipole : bool
-            Turn on to fit and remove the dipole from the I map. Only for
-            healpix. Cannot be used without sub_monopole.
-
-        shape : tuple
-            In order to compute power spectra, every map and mask
-            must be extracted into a common shape and WCS. This
-            argument specifies this common shape.
-        wcs : astropy wcs object
-            Common WCS used for power spectra calculations.
-
-        kx : float
-            wavenumber to cut in abs(kx)
-        ky : float
-            wavenumber to cut in abs(ky)
-        legacy_steve : boolean
-            If true, adds (-1,-1) to input map `wcs.crpix`
-            to mimic the behavior of Steve's code.
-
-        nside : int
-            nside describes the size of a healpix map. Pass this if you want
-            to use healpix pixelization instead of CAR.
+        maps : ndarray or tuple
+            The maps you want to operate on. This needs to be a tuple of length 3,
+            or an array of length `(3,) + map.shape`. 
+        masks : ndarray or tuple
+            The masks you want to operate on.
+        beams: list or tuple
+            The beams you want to use.
+        unpixwin: bool
+            If true, we account for the pixel window function when computing 
+            power spectra. For healpix this is accomplished by modifying the beam
+            in-place.
+        verbose : bool
+            Print various information about what is being assumed. You should
+            probably enable this the first time you try to run a particular scenario,
+            but you can set this to false if you find it's annoying to have it printing 
+            so much stuff, like if you are computing many spectra in a loop.
 
         """
-        self.map_I, self.map_Q, self.map_U = map_I, map_Q, map_U
-        self.mask_temp, self.mask_pol = mask_temp, mask_pol
 
-        if nside is None:
+        # check the input to make sure nothing funny is happening. we want
+        # input tuples! A tuple of three maps, a tuple of two masks, a tuple
+        # of two beams. For convenience, we allow for just one mask or beam to be 
+        # passed -- in this case the same mask or beam will be used for both 
+        # temperature and polarization.
+        if hasattr(maps, '__len__'):
+            if len(maps) == 3:
+                self.map_I, self.map_Q, self.map_U = maps
+            else:
+                raise ValueError(
+                    "Pass a tuple or list of maps, which needs to be of\n"
+                    "length 3 (for IQU).\n" 
+                    "For T only, try setting maps=(i_map, None, None).\n" 
+                    "If you wanted just pol maps, try maps=(None, q_map, u_map).")
+
+        if hasattr(masks, '__len__'):
+            if len(masks) == 2:
+                self.mask_temp, self.mask_pol = masks
+            elif isinstance(masks, np.ndarray):
+                if verbose: print("Assuming the same mask for both I and QU.")
+                self.mask_temp, self.mask_pol = masks, masks
+
+        if hasattr(beams, '__len__'):
+            if len(beams) == 2:
+                self.beam_temp, self.beam_pol = beams
+            else:
+                if verbose: print("Assuming the same beams for both I and QU.")
+                self.beam_temp, self.beam_pol = beams, beams
+
+
+        if isinstance(self.map_I, enmap.ndmap):
             self.mode = 'car'
         else:
             self.mode = 'healpix'
@@ -186,7 +160,7 @@ class namap:
         self.has_pol = (map_Q is not None) and (map_U is not None)
         
         if verbose: print(
-            'Creating a %s map. temperature: %s, polarization: %s' % 
+            'Creating a %s namap. temperature: %s, polarization: %s' % 
             (self.mode, self.has_temp, self.has_pol))
 
         if ((map_Q is None and map_U is not None) or
@@ -202,24 +176,6 @@ class namap:
         if self.has_pol and self.mask_pol is None:
             self.mask_pol = self.map_Q * 0.0 + 1.0
             if verbose: print('mask_pol not specified, setting polarization mask to one.')
-
-        # branch here based on CAR or healpix
-        if self.mode == 'car':
-            self.__initialize_CAR_map(
-                map_I=map_I, map_Q=map_Q, map_U=map_U,
-                mask_temp=mask_temp, mask_pol=mask_pol,
-                beam_temp=beam_temp, beam_pol=beam_pol,
-                unpixwin=unpixwin, shape=shape, wcs=wcs,
-                kx=kx, ky=ky, kspace_apo=kspace_apo, legacy_steve=legacy_steve,
-                verbose=verbose)
-        else:
-            self.__initialize_hp_map(
-                map_I=map_I, map_Q=map_Q, map_U=map_U,
-                mask_temp=mask_temp, mask_pol=mask_pol,
-                beam_temp=beam_temp, beam_pol=beam_pol,
-                unpixwin=unpixwin,
-                nside=nside, sub_monopole=sub_monopole, sub_dipole=sub_dipole,
-                verbose=verbose)
 
 
     def __initialize_CAR_map(self,
@@ -264,20 +220,11 @@ class namap:
         self.lmax_beam = 3 * nside
         self.set_beam(beam_temp, beam_pol, verbose=verbose)
         self.pixwin_T, self.pixwin_P = hp.sphtfunc.pixwin(self.nside, pol=True)
-        if verbose: print("Multiplying beam with healpix pixel window function.")
+        if verbose: print("Including the healpix pixel window function.")
         if self.has_temp: self.pixwin_T = self.pixwin_T[:len(self.beam_temp)]
         if self.has_pol: self.pixwin_P = self.pixwin_P[:len(self.beam_pol)]
         
-        if sub_monopole:  # subtract TT monopole and dipole
-            if verbose: 
-                if sub_dipole: print("Subtracting monopole and dipole from temperature map.")
-                else: print("Subtracting monopole from temperature map.")
-            self.map_I = maputils.sub_mono_di(self.map_I, self.mask_temp,
-                                              nside, sub_dipole)
-        
-#         if unpixwin:
-#             if self.has_temp: self.beam_temp *= self.pixwin_T
-#             if self.has_pol: self.beam_pol *= self.pixwin_P
+        # this is written so that the beam is kept separate from the pixel window
         if self.has_temp: 
             beam_temp = self.beam_temp.copy()
             if unpixwin: beam_temp *= self.pixwin_T
