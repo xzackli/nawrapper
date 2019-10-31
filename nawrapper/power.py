@@ -7,8 +7,11 @@ from pixell import enmap
 import nawrapper.maputils as maputils
 import json
 import os
+import abc, six
 
-def compute_spectra(namap1, namap2, bins=None, mc=None, lmax=None, verbose=True):
+
+def compute_spectra(namap1, namap2, 
+                    bins=None, mc=None, lmax=None, verbose=True):
     r"""Compute all of the spectra between two maps.
 
     This computes all cross spectra between two :py:class:`nawrapper.ps.namap`
@@ -42,32 +45,32 @@ def compute_spectra(namap1, namap2, bins=None, mc=None, lmax=None, verbose=True)
     
     if bins is None and mc is None and lmax is None:
         raise ValueError(
-            "You must specify either a binning, lmax, or a mode coupling object.")
+            "You must specify either a binning, lmax, "
+            "or a mode coupling object.")
         
     if lmax is not None and bins is None and mc is None:
-        if verbose: print("Assuming unbinned and computing the mode coupling matrix.")
+        if verbose: 
+            print("Assuming unbinned and computing the mode coupling matrix.")
         bins = get_unbinned_bins(lmax) # will choose lmax, nside ignored
 
     if mc is None:
         mc = mode_coupling(namap1, namap2, bins)
 
+    # compute the TEB spectra as appropriate
     Cb = {}
     if namap1.has_temp and namap2.has_temp:
         Cb['TT'] = mc.compute_master(
             namap1.field_spin0, namap2.field_spin0, mc.w00)[0]
-
     if namap1.has_temp and namap2.has_pol:
         spin1 = mc.compute_master(
             namap1.field_spin0, namap2.field_spin2, mc.w02)
         Cb['TE'] = spin1[0]
         Cb['TB'] = spin1[1]
-
     if namap1.has_pol and namap2.has_temp:
         spin1 = mc.compute_master(
             namap1.field_spin2, namap2.field_spin0, mc.w20)
         Cb['ET'] = spin1[0]
         Cb['BT'] = spin1[1]
-
     if namap1.has_pol and namap2.has_pol:
         spin2 = mc.compute_master(
             namap1.field_spin2, namap2.field_spin2, mc.w22)
@@ -79,123 +82,165 @@ def compute_spectra(namap1, namap2, bins=None, mc=None, lmax=None, verbose=True)
     Cb['ell'] = mc.lb
     return Cb
 
-
-class namap:
+# need this decorator to make this class abstract
+@six.add_metaclass(abc.ABCMeta)
+class namap():
     """Object for organizing map products."""
 
-    def __init__(self, maps, masks=None, beams=None, unpixwin=True, verbose=True):
-        r"""Create a new namap.
+    @abc.abstractmethod
+    def __init__(self, maps, masks=None, beams=None, 
+                 unpixwin=True, verbose=True):
+        r"""Generic abstract 
 
-        This object organizes the various ingredients that are required for a
-        map to be used in power spectra analysis. Each map has an associated
+        Objects which inherit from this will organize the various ingredients 
+        that are required for a map to be used in power spectra analysis. 
+        Each map has an associated
 
         1. IQU maps
         2. mask, referring to the product of hits, point source mask, etc.
         3. beam transfer function
 
-        By default, we do not reproduce the output of Steve's code. We do offer
-        this functionality: set the optional flag `legacy_steve=True` to offset
-        the mask and the map by one pixel in each dimension. This constructor
-        multiplies the apodized k-space taper into your mask.
-        In general, your mask should already have the edges tapered, so this
-        will not change your results significantly.
-
         Parameters
         ----------
         maps : ndarray or tuple
-            The maps you want to operate on. This needs to be a tuple of length 3,
-            or an array of length `(3,) + map.shape`. 
+            The maps you want to operate on. This needs to be a tuple of 
+            length 3, or an array of length `(3,) + map.shape`. 
         masks : ndarray or tuple
             The masks you want to operate on.
         beams: list or tuple
             The beams you want to use.
         unpixwin: bool
             If true, we account for the pixel window function when computing 
-            power spectra. For healpix this is accomplished by modifying the beam
-            in-place.
+            power spectra. For healpix this is accomplished by modifying the 
+            beam in-place.
         verbose : bool
             Print various information about what is being assumed. You should
-            probably enable this the first time you try to run a particular scenario,
-            but you can set this to false if you find it's annoying to have it printing 
-            so much stuff, like if you are computing many spectra in a loop.
+            probably enable this the first time you try to run a particular 
+            scenario, but you can set this to false if you find it's annoying 
+            to have it printing so much stuff, like if you are computing many 
+            spectra in a loop.
 
         """
 
         # check the input to make sure nothing funny is happening. we want
-        # input tuples! A tuple of three maps, a tuple of two masks, a tuple
-        # of two beams. For convenience, we allow for just one mask or beam to be 
-        # passed -- in this case the same mask or beam will be used for both 
-        # temperature and polarization.
+        # input tuples! A tuple of three maps.
         if hasattr(maps, '__len__'):
             if len(maps) == 3:
                 self.map_I, self.map_Q, self.map_U = maps
+            elif type(maps) is enmap.ndmap and maps.ndim==2:
+                self.map_I, self.map_Q, self.map_U = maps, None, None
+            elif type(maps) is np.ndarray and maps.ndim==1:
+                self.map_I, self.map_Q, self.map_U = maps, None, None
             else:
                 raise ValueError(
                     "Pass a tuple or list of maps, which needs to be of\n"
                     "length 3 (for IQU).\n" 
-                    "For T only, try setting maps=(i_map, None, None).\n" 
-                    "If you wanted just pol maps, try maps=(None, q_map, u_map).")
-
-        if hasattr(masks, '__len__'):
-            if len(masks) == 2:
-                self.mask_temp, self.mask_pol = masks
-            elif isinstance(masks, np.ndarray):
-                if verbose: print("Assuming the same mask for both I and QU.")
-                self.mask_temp, self.mask_pol = masks, masks
-
-        if hasattr(beams, '__len__'):
-            if len(beams) == 2:
-                self.beam_temp, self.beam_pol = beams
-            else:
-                if verbose: print("Assuming the same beams for both I and QU.")
-                self.beam_temp, self.beam_pol = beams, beams
+                    "For T only, try setting maps=(i_map, None, None).\n If "
+                    "you wanted just pol maps, try maps=(None, q_map, u_map).")
 
 
         if isinstance(self.map_I, enmap.ndmap):
             self.mode = 'car'
         else:
             self.mode = 'healpix'
-        
-        self.has_temp = (map_I is not None)
-        self.has_pol = (map_Q is not None) and (map_U is not None)
-        
-        if verbose: print(
-            'Creating a %s namap. temperature: %s, polarization: %s' % 
-            (self.mode, self.has_temp, self.has_pol))
 
-        if ((map_Q is None and map_U is not None) or
-                (map_Q is not None and map_U is None)):
-             raise ValueError("Q and U must both be specified for pol maps.")
-        if ((map_I is None) and (map_U is None) and (map_Q is None)):
+        # a tuple of two masks
+        if hasattr(masks, '__len__'):
+            if len(masks) == 2:
+                self.mask_temp, self.mask_pol = masks
+            elif isinstance(masks, np.ndarray):
+                if verbose: print("Assuming the same mask for both I and QU.")
+                self.mask_temp, self.mask_pol = masks, masks
+        else:
+            self.mask_temp, self.mask_pol = None, None
+
+        # a tuple of two beams
+        if hasattr(beams, '__len__'):
+            if len(beams) == 2:
+                self.beam_temp, self.beam_pol = beams[0].copy(), beams[1].copy()
+            else:
+                if verbose: print("Assuming the same beams for both I and QU.")
+                self.beam_temp, self.beam_pol = beams.copy(), beams.copy()
+        else:
+            if verbose: print("Setting beam to 1.")
+            self.beam_temp, self.beam_pol = None, None
+        
+        # remember which spectra to compute
+        self.has_temp = (self.map_I is not None)
+        self.has_pol = (self.map_Q is not None) and (self.map_U is not None)
+        
+        if verbose: 
+            print('Creating a %s namap. temperature: %s, polarization: %s' % 
+                (self.mode, self.has_temp, self.has_pol))
+
+        if ((self.map_Q is None and self.map_U is not None) or
+                (self.map_Q is not None and self.map_U is None)):
+            raise ValueError("Q and U must both be specified for pol maps.")
+        if ((self.map_I is None) and (self.map_U is None) and (self.map_Q is None)):
             raise ValueError("Must specify at least I or QU maps.")
 
         # set masks = 1 if not specified.
         if self.has_temp and self.mask_temp is None:
             self.mask_temp = self.map_I * 0.0 + 1.0
-            if verbose: print('mask_temp not specified, setting temperature mask to one.')
+            if verbose: 
+                print('mask_temp not specified, setting '
+                      'temperature mask to one.')
         if self.has_pol and self.mask_pol is None:
             self.mask_pol = self.map_Q * 0.0 + 1.0
-            if verbose: print('mask_pol not specified, setting polarization mask to one.')
+            if verbose: 
+                print('mask_pol not specified, setting '
+                      'polarization mask to one.')
+
+    def set_beam(self, 
+                 apply_healpix_window=False, verbose=False):
+        """Set and extend the object's beam up to lmax."""
+        if self.has_temp:
+            beam_temp = np.ones(self.lmax_beam)
+            if self.beam_temp is None:
+                if verbose: print("beam_temp not specified, setting " +
+                                  "temperature beam transfer function to 1.")
+            else:
+                beam_temp[:len(beam_temp)] = self.beam_temp
+                beam_temp[len(beam_temp):] = self.beam_temp[-1]
+        
+        if self.has_pol:
+            beam_pol = np.ones(self.lmax_beam)
+            if self.beam_pol is None:
+                 if verbose: print("beam_pol not specified, setting " +
+                                  "polarization beam transfer function to 1.")
+            else:
+                beam_pol[:len(beam_temp)] = self.beam_pol
+                beam_pol[len(beam_temp):] = self.beam_pol[-1]
 
 
-    def __initialize_CAR_map(self,
-            map_I, map_Q, map_U,
-            mask_temp, mask_pol, beam_temp, beam_pol,
-            unpixwin, shape, wcs,
-            kx, ky, kspace_apo, legacy_steve, verbose):
+class namap_car(namap):
+    r"""Map container for CAR pixellization
 
-        if wcs is None:  # inherit the mask's shape and WCS if not specified
-            shape = mask_temp.shape
-            wcs = mask_temp.wcs
-        self.shape = shape
-        self.wcs = wcs
+    By default, we do not reproduce the output of Steve's code. We do offer
+    this functionality: set the optional flag `legacy_steve=True` to offset
+    the mask and the map by one pixel in each dimension. This constructor
+    multiplies the apodized k-space taper into your mask.
+    In general, your mask should already have the edges tapered, so this
+    will not change your results significantly.
+    """
+
+    def __init__(self, maps, masks=None, beams=None, 
+                 unpixwin=True, kx=0, ky=0, kspace_apo=40, legacy_steve=False, 
+                 verbose=True):
+
+        super(namap_car, self).__init__(
+            maps=maps, masks=masks, beams=beams, 
+            unpixwin=unpixwin, verbose=verbose)
+
+        self.shape = self.map_I.shape
+        self.wcs = self.map_I.wcs
         self.lmax_beam = int(180.0/abs(np.min(self.wcs.wcs.cdelt))) + 1
+        self.set_beam(verbose=verbose)
         self.legacy_steve = legacy_steve
         # needed to reproduce steve's spectra
         if legacy_steve:
             self.map_I.wcs.wcs.crpix += np.array([-1, -1])
             if verbose: print('Applying legacy_steve correction.')
-        self.set_beam(beam_temp, beam_pol, verbose=verbose)
         self.extract_and_filter_CAR(kx, ky, kspace_apo,
                                     legacy_steve, unpixwin, verbose=verbose)
 
@@ -210,58 +255,6 @@ class namap:
                 self.mask_pol, [self.map_Q, self.map_U],
                 beam=self.beam_pol, wcs=self.wcs, n_iter=0)
 
-    def __initialize_hp_map(self,
-                            map_I, map_Q, map_U,
-                            mask_temp, mask_pol,
-                            beam_temp, beam_pol,
-                            unpixwin,
-                            nside, sub_monopole, sub_dipole, verbose):
-        self.nside = nside
-        self.lmax_beam = 3 * nside
-        self.set_beam(beam_temp, beam_pol, verbose=verbose)
-        self.pixwin_T, self.pixwin_P = hp.sphtfunc.pixwin(self.nside, pol=True)
-        if verbose: print("Including the healpix pixel window function.")
-        if self.has_temp: self.pixwin_T = self.pixwin_T[:len(self.beam_temp)]
-        if self.has_pol: self.pixwin_P = self.pixwin_P[:len(self.beam_pol)]
-        
-        # this is written so that the beam is kept separate from the pixel window
-        if self.has_temp: 
-            beam_temp = self.beam_temp.copy()
-            if unpixwin: beam_temp *= self.pixwin_T
-        if self.has_pol: 
-            beam_pol = self.beam_pol.copy()
-            if unpixwin: beam_pol *= self.pixwin_P
-        
-        # construct the a_lm of the maps, depending on what data is available
-        if verbose: print("Computing spherical harmonics.\n")
-        if self.has_temp:
-            self.field_spin0 = nmt.NmtField(
-                self.mask_temp, [self.map_I],
-                beam=beam_temp, n_iter=0)
-        if self.has_pol:
-            self.field_spin2 = nmt.NmtField(
-                self.mask_pol, [self.map_Q, self.map_U],
-                beam=beam_pol, n_iter=0)
-
-    def set_beam(self, beam_temp, beam_pol, apply_healpix_window=False, verbose=False):
-        """Set and extend the object's beam up to lmax."""
-        if self.has_temp:
-            self.beam_temp = np.ones(self.lmax_beam)
-            if beam_temp is None:
-                if verbose: print("beam_temp not specified, setting " +
-                                  "temperature beam transfer function to 1.")
-            else:
-                self.beam_temp[:len(beam_temp)] = beam_temp
-                self.beam_temp[len(beam_temp):] = 0.0
-        
-        if self.has_pol:
-            self.beam_pol = np.ones(self.lmax_beam)
-            if beam_pol is None:
-                 if verbose: print("beam_pol not specified, setting " +
-                                  "polarization beam transfer function to 1.")
-            else:
-                self.beam_pol[:len(beam_pol)] = beam_pol
-                self.beam_pol[len(beam_pol):] = 0.0
 
     def extract_and_filter_CAR(self, kx, ky, kspace_apo, 
                                legacy_steve, unpixwin, verbose=False):
@@ -272,6 +265,7 @@ class namap:
         if verbose: print(
             ('Applying a k-space filter (kx=%s, ky=%s' % (kx, ky)) +
             ', apo=%s), unpixwin: %s' % (kspace_apo, unpixwin))
+
         # extract to common shape and wcs
         if self.has_temp:
             self.map_I = enmap.extract(self.map_I, self.shape, self.wcs)
@@ -301,7 +295,39 @@ class namap:
                 legacy_steve=legacy_steve)
 
 
+class namap_healpy(namap):
 
+    def __init__(self, maps, masks=None, beams=None, unpixwin=True, 
+                 sub_monopole=True, sub_dipole=False, verbose=True, n_iter=3):
+
+        super(namap_healpy, self).__init__(
+            maps=maps, masks=masks, beams=beams,
+            unpixwin=unpixwin, verbose=verbose)
+
+        self.nside = hp.npix2nside(len(self.map_I))
+        self.lmax_beam = 3 * self.nside
+        self.set_beam(verbose=verbose)
+        self.pixwin_T, self.pixwin_P = hp.sphtfunc.pixwin(self.nside, pol=True)
+        if verbose: print("Including the healpix pixel window function.")
+        if self.has_temp: self.pixwin_T = self.pixwin_T[:len(self.beam_temp)]
+        if self.has_pol: self.pixwin_P = self.pixwin_P[:len(self.beam_pol)]
+        
+        # this is written so that the beam is kept separate from the pixel window
+        if self.has_temp: 
+            self.beam_temp *= self.pixwin_T
+        if self.has_pol: 
+            self.beam_pol *= self.pixwin_P
+        
+        # construct the a_lm of the maps, depending on what data is available
+        if verbose: print("Computing spherical harmonics.\n")
+        if self.has_temp:
+            self.field_spin0 = nmt.NmtField(
+                self.mask_temp, [self.map_I],
+                beam=self.beam_temp, n_iter=n_iter)
+        if self.has_pol:
+            self.field_spin2 = nmt.NmtField(
+                self.mask_pol, [self.map_Q, self.map_U],
+                beam=beam_pol, n_iter=n_iter)
 
 
 class mode_coupling:
@@ -327,8 +353,8 @@ class mode_coupling:
             object.
 
         mcm_dir: string
-            Specify a directory which contains the workspace files for this mode-
-            coupling object.
+            Specify a directory which contains the workspace files for this 
+            mode-coupling object.
         """
 
         if mcm_dir is not None:
@@ -348,24 +374,21 @@ class mode_coupling:
             # compute whichever mode coupling matrices we have data for
             if self.has_temp:
                 self.w00 = nmt.NmtWorkspace()
-                self.w00.compute_coupling_matrix(namap1.field_spin0, namap2.field_spin0,
-                                                 bins, n_iter=0)
+                self.w00.compute_coupling_matrix(
+                    namap1.field_spin0, namap2.field_spin0, bins, n_iter=0)
 
             if self.has_temp and self.has_pol:
                 self.w02 = nmt.NmtWorkspace()
                 self.w02.compute_coupling_matrix(
-                    namap1.field_spin0, namap2.field_spin2,
-                    bins, n_iter=0)
+                    namap1.field_spin0, namap2.field_spin2, bins, n_iter=0)
                 self.w20 = nmt.NmtWorkspace()
                 self.w20.compute_coupling_matrix(
-                    namap1.field_spin2, namap2.field_spin0,
-                    bins, n_iter=0)
+                    namap1.field_spin2, namap2.field_spin0, bins, n_iter=0)
 
             if self.has_pol:
                 self.w22 = nmt.NmtWorkspace()
                 self.w22.compute_coupling_matrix(
-                    namap1.field_spin2, namap2.field_spin2,
-                    bins, n_iter=0)
+                    namap1.field_spin2, namap2.field_spin2, bins, n_iter=0)
 
     def load_from_dir(self, mcm_dir):
         """Read information from a nawrapper mode coupling directory."""
@@ -401,12 +424,12 @@ class mode_coupling:
 
         # extract bin kwargs
         lmax = self.bins.lmax
-        bpws_copy = -np.ones(lmax+1).astype(int)
-        weights_copy = np.ones(lmax+1)
+        bpws = -np.ones(lmax+1).astype(int)
+        weights = np.ones(lmax+1)
         l_eff = self.bins.get_effective_ells()
         for i in range(len(l_eff)):
-            bpws_copy[self.bins.get_ell_list(i)] = i
-            weights_copy[self.bins.get_ell_list(i)] = self.bins.get_weight_list(i)
+            bpws[self.bins.get_ell_list(i)] = i
+            weights[self.bins.get_ell_list(i)] = self.bins.get_weight_list(i)
 
         # basic json
         data = {
@@ -433,8 +456,8 @@ class mode_coupling:
             'nside' : 2048,
             'lmax' : lmax,
             'ells' : np.arange(lmax+1).tolist(),
-            'bpws' : bpws_copy.tolist(),
-            'weights' : weights_copy.tolist()
+            'bpws' : bpws.tolist(),
+            'weights' : weights.tolist()
         }
 
         with open(os.path.join(mcm_dir,'mcm.json'), 'w') as write_file:
