@@ -5,9 +5,10 @@ import healpy as hp
 import numpy as np
 from pixell import enmap
 import nawrapper.maptools as maptools
+
 import json
 import os
-import abc, six
+import abc, six, errno
 
 
 def compute_spectra(namap1, namap2, 
@@ -195,20 +196,20 @@ class abstract_namap():
                  apply_healpix_window=False, verbose=False):
         """Set and extend the object's beam up to lmax."""
         if self.has_temp:
-            beam_temp = np.ones(self.lmax_beam)
             if self.beam_temp is None:
                 if verbose: print("beam_temp not specified, setting " +
                                   "temperature beam transfer function to 1.")
             else:
+                beam_temp = np.ones(max(self.lmax_beam, len(self.beam_temp)))
                 beam_temp[:len(self.beam_temp)] = self.beam_temp
                 beam_temp[len(self.beam_temp):] = self.beam_temp[-1]
             self.beam_temp = beam_temp
         if self.has_pol:
-            beam_pol = np.ones(self.lmax_beam)
             if self.beam_pol is None:
                  if verbose: print("beam_pol not specified, setting " +
                                   "polarization beam transfer function to 1.")
             else:
+                beam_pol = np.ones(max(self.lmax_beam, len(self.beam_pol)))
                 beam_pol[:len(self.beam_pol)] = self.beam_pol
                 beam_pol[len(self.beam_pol):] = self.beam_pol[-1]
             self.beam_pol = beam_pol
@@ -317,9 +318,9 @@ class namap_hp(abstract_namap):
         
         # this is written so that the beam is kept separate from the pixel window
         if self.has_temp: 
-            self.beam_temp *= self.pixwin_T
+            self.beam_temp[:len(self.pixwin_T)] *= self.pixwin_T
         if self.has_pol: 
-            self.beam_pol *= self.pixwin_P
+            self.beam_pol[:len(self.pixwin_P)] *= self.pixwin_P
         
         # construct the a_lm of the maps, depending on what data is available
         if verbose: print("Computing spherical harmonics.\n")
@@ -436,24 +437,21 @@ class mode_coupling:
             weights[self.bins.get_ell_list(i)] = self.bins.get_weight_list(i)
 
         # basic json
-        data = {
-            'has_temp': self.has_temp,
-            'has_pol': self.has_pol
-        }
+        data = {'has_temp': self.has_temp, 'has_pol': self.has_pol}
 
         # write binaries
         if self.has_temp:
-            self.w00.write_to(mcm_dir+'/w00.bin')
             data.update({'w00': 'w00.bin'})
+            self.w00.write_to(mcm_dir+'/w00.bin')
 
         if self.has_temp and self.has_pol:
+            data.update({'w02': 'w02.bin', 'w20': 'w20.bin'})
             self.w02.write_to(os.path.join(mcm_dir, data['w02']))
             self.w20.write_to(os.path.join(mcm_dir, data['w20']))
-            data.update({'w02': 'w02.bin', 'w20': 'w20.bin'})
 
         if self.has_pol:
-            self.w22.write_to(os.path.join(mcm_dir, data['w22']))
             data.update({'w22': 'w22.bin'})
+            self.w22.write_to(os.path.join(mcm_dir, data['w22']))
 
         # write bin kwargs
         data['bin_kwargs'] = {

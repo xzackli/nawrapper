@@ -68,16 +68,17 @@ class nacov:
                 self.signal[XY] = self.smooth_and_interpolate(
                     mc.lb, self.Cl12[XY], 
                     smoothing_window, smoothing_polyorder)
-            if XY not in self.noise.keys():
+            if XY + '_1' not in self.noise.keys():
                 self.noise[XY + '_1'] = self.smooth_and_interpolate(
                     mc.lb, self.Cl11[XY], 
                     smoothing_window, smoothing_polyorder) - self.signal[XY]
+                self.noise[XY + '_1'] = np.maximum(self.noise[XY + '_1'], 0.0)
+            if XY + '_2' not in self.noise.keys():
                 self.noise[XY + '_2'] = self.smooth_and_interpolate(
                     mc.lb, self.Cl22[XY], 
                     smoothing_window, smoothing_polyorder) - self.signal[XY]
-                
-                self.noise[XY + '_1'] = np.maximum(self.noise[XY + '_1'], 0.0)
                 self.noise[XY + '_2'] = np.maximum(self.noise[XY + '_2'], 0.0)
+                
         
         if 'EE' in self.signal and 'EB' not in self.signal:
             print("setting EB = 0")
@@ -97,7 +98,7 @@ class nacov:
                 namap1.field_spin0, namap2.field_spin0, 
                 lmax=self.lmax)
 
-            beam_tt = (namap1.beam_temp * namap2.beam_temp)[:self.lmax+1]
+            beam_tt = (namap1.beam_temp[:self.lmax+1] * namap2.beam_temp[:self.lmax+1])
             covar_00_00 = nmt.gaussian_covariance(
                 self.cw00,
                 0, 0, 0, 0,  # Spins of the 4 fields
@@ -116,7 +117,7 @@ class nacov:
                 namap1.field_spin2, namap2.field_spin2, 
                 lmax=self.lmax)
 
-            beam_ee = (namap1.beam_pol * namap2.beam_pol)[:self.lmax+1]
+            beam_ee = (namap1.beam_pol[:self.lmax+1] * namap2.beam_pol[:self.lmax+1])
             covar_22_22 = nmt.gaussian_covariance(
                 self.cw22, 2, 2, 2, 2,  # Spins of the 4 fields
                 [(self.signal['EE']+self.noise['EE_1']) * beam_ee, (self.signal['EB']) * beam_ee,
