@@ -4,7 +4,7 @@ import pymaster as nmt
 import healpy as hp
 import numpy as np
 from pixell import enmap
-import nawrapper.maputils as maputils
+import nawrapper.maptools as maptools
 import nawrapper.power as power
 from scipy.signal import savgol_filter
 

@@ -4,7 +4,7 @@ import pymaster as nmt
 import healpy as hp
 import numpy as np
 from pixell import enmap
-import nawrapper.maputils as maputils
+import nawrapper.maptools as maptools
 import json
 import os
 import abc, six
@@ -84,7 +84,7 @@ def compute_spectra(namap1, namap2,
 
 # need this decorator to make this class abstract
 @six.add_metaclass(abc.ABCMeta)
-class namap():
+class abstract_namap():
     """Object for organizing map products."""
 
     @abc.abstractmethod
@@ -200,20 +200,20 @@ class namap():
                 if verbose: print("beam_temp not specified, setting " +
                                   "temperature beam transfer function to 1.")
             else:
-                beam_temp[:len(beam_temp)] = self.beam_temp
-                beam_temp[len(beam_temp):] = self.beam_temp[-1]
-        
+                beam_temp[:len(self.beam_temp)] = self.beam_temp
+                beam_temp[len(self.beam_temp):] = self.beam_temp[-1]
+            self.beam_temp = beam_temp
         if self.has_pol:
             beam_pol = np.ones(self.lmax_beam)
             if self.beam_pol is None:
                  if verbose: print("beam_pol not specified, setting " +
                                   "polarization beam transfer function to 1.")
             else:
-                beam_pol[:len(beam_temp)] = self.beam_pol
-                beam_pol[len(beam_temp):] = self.beam_pol[-1]
+                beam_pol[:len(self.beam_pol)] = self.beam_pol
+                beam_pol[len(self.beam_pol):] = self.beam_pol[-1]
+            self.beam_pol = beam_pol
 
-
-class namap_car(namap):
+class namap_car(abstract_namap):
     r"""Map container for CAR pixellization
 
     By default, we do not reproduce the output of Steve's code. We do offer
@@ -226,14 +226,17 @@ class namap_car(namap):
 
     def __init__(self, maps, masks=None, beams=None, 
                  unpixwin=True, kx=0, ky=0, kspace_apo=40, legacy_steve=False, 
-                 verbose=True):
+                 verbose=True, sub_shape=None, sub_wcs=None):
 
         super(namap_car, self).__init__(
             maps=maps, masks=masks, beams=beams, 
             unpixwin=unpixwin, verbose=verbose)
 
-        self.shape = self.map_I.shape
-        self.wcs = self.map_I.wcs
+        self.shape = sub_shape
+        self.wcs = sub_wcs
+        if self.shape is None: self.shape = masks_temp.shape
+        if self.wcs is None: self.wcs = masks_temp.wcs
+        
         self.lmax_beam = int(180.0/abs(np.min(self.wcs.wcs.cdelt))) + 1
         self.set_beam(verbose=verbose)
         self.legacy_steve = legacy_steve
@@ -295,12 +298,12 @@ class namap_car(namap):
                 legacy_steve=legacy_steve)
 
 
-class namap_healpy(namap):
+class namap_hp(abstract_namap):
 
     def __init__(self, maps, masks=None, beams=None, unpixwin=True, 
                  sub_monopole=True, sub_dipole=False, verbose=True, n_iter=3):
 
-        super(namap_healpy, self).__init__(
+        super(namap_hp, self).__init__(
             maps=maps, masks=masks, beams=beams,
             unpixwin=unpixwin, verbose=verbose)
 
@@ -327,8 +330,8 @@ class namap_healpy(namap):
         if self.has_pol:
             self.field_spin2 = nmt.NmtField(
                 self.mask_pol, [self.map_Q, self.map_U],
-                beam=beam_pol, n_iter=n_iter)
-
+                beam=self.beam_pol, n_iter=n_iter)
+            
 
 class mode_coupling:
     r"""Wrapper around the NaMaster workspace object.
@@ -417,10 +420,11 @@ class mode_coupling:
             if self.has_pol:
                 self.w22 = nmt.NmtWorkspace()
                 self.w22.read_from(os.path.join(mcm_dir, data['w22']))
+             
 
     def write_to_dir(self, mcm_dir):
         # create directory
-        pathlib.Path(mcm_dir).mkdir(parents=True, exist_ok=True)
+        mkdir_p(mcm_dir)
 
         # extract bin kwargs
         lmax = self.bins.lmax
@@ -602,3 +606,14 @@ def bin_spec_dict(Cb, binleft, binright, lmax):
 
     result['ell'] = lb
     return result
+
+
+def mkdir_p(path):
+    """Make a directory and its parents."""
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
