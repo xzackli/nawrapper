@@ -4,18 +4,26 @@ nawrapper package
 Submodules
 ----------
 
-nawrapper.cov module
---------------------
+nawrapper.covtools module
+-------------------------
 
-.. automodule:: nawrapper.cov
+.. automodule:: nawrapper.covtools
    :members:
    :undoc-members:
    :show-inheritance:
 
-nawrapper.maputils module
+nawrapper.maptools module
 -------------------------
 
-.. automodule:: nawrapper.maputils
+.. automodule:: nawrapper.maptools
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+nawrapper.planck module
+-----------------------
+
+.. automodule:: nawrapper.planck
    :members:
    :undoc-members:
    :show-inheritance:
