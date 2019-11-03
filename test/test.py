@@ -45,15 +45,22 @@ def test_cov_TT():
     assert (np.std(np.sqrt(np.diag(cov.covar_TT_TT))[40:120] / 
                    np.std(samples, axis=0)[40:120]
             )) < 0.3
+    
+    assert abs(np.mean(np.sqrt(np.diag(cov.covar_TT_TT))[40:120] / 
+               np.std(samples, axis=0)[40:120]
+        ) - 1 ) < 0.05
+
 
     # test the mean spectrum
     assert (np.std(cl[40:120] / 
                    np.mean(samples, axis=0)[40:120]
             )) < 0.1
 
+    assert abs(np.mean(cl[2:][40:120] / 
+               np.mean(samples, axis=0)[40:120]
+        ) - 1) < 0.01
 
 def test_unbinned_bins():
-    assert 1 == 1
 
     b = nw.get_unbinned_bins(10)
     assert np.all(b.get_effective_ells() == np.arange(2,11).astype(float))
