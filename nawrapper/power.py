@@ -199,6 +199,7 @@ class abstract_namap():
             if self.beam_temp is None:
                 if verbose: print("beam_temp not specified, setting " +
                                   "temperature beam transfer function to 1.")
+                beam_temp = np.ones(self.lmax_beam)
             else:
                 beam_temp = np.ones(max(self.lmax_beam, len(self.beam_temp)))
                 beam_temp[:len(self.beam_temp)] = self.beam_temp
@@ -206,8 +207,9 @@ class abstract_namap():
             self.beam_temp = beam_temp
         if self.has_pol:
             if self.beam_pol is None:
-                 if verbose: print("beam_pol not specified, setting " +
+                if verbose: print("beam_pol not specified, setting " +
                                   "polarization beam transfer function to 1.")
+                beam_pol = np.ones(self.lmax_beam)
             else:
                 beam_pol = np.ones(max(self.lmax_beam, len(self.beam_pol)))
                 beam_pol[:len(self.beam_pol)] = self.beam_pol
@@ -235,8 +237,8 @@ class namap_car(abstract_namap):
 
         self.shape = sub_shape
         self.wcs = sub_wcs
-        if self.shape is None: self.shape = masks_temp.shape
-        if self.wcs is None: self.wcs = masks_temp.wcs
+        if self.shape is None: self.shape = self.mask_temp.shape
+        if self.wcs is None: self.wcs = self.mask_temp.wcs
         
         self.lmax_beam = int(180.0/abs(np.min(self.wcs.wcs.cdelt))) + 1
         self.set_beam(verbose=verbose)
@@ -280,21 +282,21 @@ class namap_car(abstract_namap):
             self.map_U = enmap.extract(self.map_U, self.shape, self.wcs)
             self.mask_pol = enmap.extract(self.mask_pol, self.shape, self.wcs)
 
-        apo = maputils.get_steve_apo(self.shape, self.wcs, kspace_apo)
+        apo = maptools.get_steve_apo(self.shape, self.wcs, kspace_apo)
 
         # k-space filter step (also correct for pixel window here!)
         if self.has_temp:
             self.mask_temp *= apo  # multiply the apodized taper into your mask
-            self.map_I = maputils.kfilter_map(
+            self.map_I = maptools.kfilter_map(
                 self.map_I, apo, kx, ky, unpixwin=unpixwin,
                 legacy_steve=legacy_steve)
 
         if self.has_pol:
             self.mask_pol *= apo  # multiply the apodized taper into your mask
-            self.map_Q = maputils.kfilter_map(
+            self.map_Q = maptools.kfilter_map(
                 self.map_Q, apo, kx, ky, unpixwin=unpixwin,
                 legacy_steve=legacy_steve)
-            self.map_U = maputils.kfilter_map(
+            self.map_U = maptools.kfilter_map(
                 self.map_U, apo, kx, ky, unpixwin=unpixwin,
                 legacy_steve=legacy_steve)
 
