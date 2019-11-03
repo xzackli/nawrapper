@@ -1,19 +1,18 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import healpy as hp
 import pymaster as nmt
 import nawrapper as nw
 
 
 def test_cov_TT():
-    nside = 256
+    nside = 64
     lmax = nside * 3 - 1
     B_ell = hp.sphtfunc.gauss_beam(np.deg2rad(0.5), lmax=lmax)
 
     ells = np.arange(0,lmax)
     cl = np.zeros(len(ells))
     cl[2:] = 1/ells[2:]**2.5  # don't want monopole/dipole
-    nl = np.exp( (ells / 100)**1.5 ) / 1e8
+    nl = np.exp( (ells / 100)**1.5 ) / 1e6
     nl[0:2] = 0.0
     window_func = hp.sphtfunc.pixwin(nside=nside)
 
@@ -32,19 +31,25 @@ def test_cov_TT():
         m1, m2 = get_maps()
         return nw.compute_spectra(m1, m2, lmax=lmax, verbose=False)['TT']
 
-    samples = [get_spec() for i in range(50)]
+    print('Computing samples.')
+    samples = [get_spec() for i in range(100)]
 
     m1, m2 = get_maps()
 
+    print('Computing mode coupling matrix.')
     mc = nw.mode_coupling(m1, m2, bins=nw.get_unbinned_bins(lmax-1, nside=nside))
     cov = nw.nacov(m1, m2, mc)
     cov.compute()
+    
+    # test the covariance
+    assert (np.std(np.sqrt(np.diag(cov.covar_TT_TT))[40:120] / 
+                   np.std(samples, axis=0)[40:120]
+            )) < 0.3
 
-    assert (
-        np.std(np.sqrt(np.diag(cov.covar_TT_TT))[200:500] / 
-               np.std(samples, axis=0)[200:500]
-        )
-    ) < 0.2
+    # test the mean spectrum
+    assert (np.std(cl[40:120] / 
+                   np.mean(samples, axis=0)[40:120]
+            )) < 0.1
 
 
 def test_unbinned_bins():
