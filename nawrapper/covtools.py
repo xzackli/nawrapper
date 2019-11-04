@@ -98,7 +98,8 @@ class nacov:
                 namap1.field_spin0, namap2.field_spin0, 
                 lmax=self.lmax)
 
-            beam_tt = (namap1.beam_temp[:self.lmax+1] * namap2.beam_temp[:self.lmax+1])
+            beam_tt = (namap1.beam_temp[:self.lmax+1] * namap2.beam_temp[:self.lmax+1] *
+                       namap1.pixwin_temp[:self.lmax+1] * namap2.pixwin_temp[:self.lmax+1])
             covar_00_00 = nmt.gaussian_covariance(
                 self.cw00,
                 0, 0, 0, 0,  # Spins of the 4 fields
@@ -117,7 +118,8 @@ class nacov:
                 namap1.field_spin2, namap2.field_spin2, 
                 lmax=self.lmax)
 
-            beam_ee = (namap1.beam_pol[:self.lmax+1] * namap2.beam_pol[:self.lmax+1])
+            beam_ee = (namap1.beam_pol[:self.lmax+1] * namap2.beam_pol[:self.lmax+1] *
+                       namap1.pixwin_pol[:self.lmax+1] * namap2.pixwin_pol[:self.lmax+1])
             covar_22_22 = nmt.gaussian_covariance(
                 self.cw22, 2, 2, 2, 2,  # Spins of the 4 fields
                 [(self.signal['EE']+self.noise['EE_1']) * beam_ee, (self.signal['EB']) * beam_ee,

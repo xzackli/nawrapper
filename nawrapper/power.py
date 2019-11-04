@@ -5,7 +5,6 @@ import healpy as hp
 import numpy as np
 from pixell import enmap
 import nawrapper.maptools as maptools
-
 import json
 import os
 import abc, six, errno
@@ -42,7 +41,6 @@ def compute_spectra(namap1, namap2,
         as dictionary keys. This also contains the bin centers as key 'ell'.
 
     """
-    
     
     if bins is None and mc is None and lmax is None:
         raise ValueError(
@@ -163,8 +161,7 @@ class abstract_namap():
                 if verbose: print("Assuming the same beams for both I and QU.")
                 self.beam_temp, self.beam_pol = beams.copy(), beams.copy()
         else:
-            if verbose: print("Setting beam to 1.")
-            self.beam_temp, self.beam_pol = None, None
+            self.beam_temp, self.beam_pol = None, None # we'll set to 1 later
         
         # remember which spectra to compute
         self.has_temp = (self.map_I is not None)
@@ -184,12 +181,12 @@ class abstract_namap():
         if self.has_temp and self.mask_temp is None:
             self.mask_temp = self.map_I * 0.0 + 1.0
             if verbose: 
-                print('mask_temp not specified, setting '
+                print('temperature mask not specified, setting '
                       'temperature mask to one.')
         if self.has_pol and self.mask_pol is None:
             self.mask_pol = self.map_Q * 0.0 + 1.0
             if verbose: 
-                print('mask_pol not specified, setting '
+                print('polarization mask not specified, setting '
                       'polarization mask to one.')
 
     def set_beam(self, 
@@ -197,8 +194,8 @@ class abstract_namap():
         """Set and extend the object's beam up to lmax."""
         if self.has_temp:
             if self.beam_temp is None:
-                if verbose: print("beam_temp not specified, setting " +
-                                  "temperature beam transfer function to 1.")
+                if verbose: print("temperature beam not specified, setting " +
+                                  "temperature beam to 1.")
                 beam_temp = np.ones(self.lmax_beam)
             else:
                 beam_temp = np.ones(max(self.lmax_beam, len(self.beam_temp)))
@@ -207,8 +204,8 @@ class abstract_namap():
             self.beam_temp = beam_temp
         if self.has_pol:
             if self.beam_pol is None:
-                if verbose: print("beam_pol not specified, setting " +
-                                  "polarization beam transfer function to 1.")
+                if verbose: print("polarization beam not specified, setting " +
+                                  "P beam to 1.")
                 beam_pol = np.ones(self.lmax_beam)
             else:
                 beam_pol = np.ones(max(self.lmax_beam, len(self.beam_pol)))
@@ -313,27 +310,27 @@ class namap_hp(abstract_namap):
         self.nside = hp.npix2nside(len(self.map_I))
         self.lmax_beam = 3 * self.nside
         self.set_beam(verbose=verbose)
-        self.pixwin_T, self.pixwin_P = hp.sphtfunc.pixwin(self.nside, pol=True)
+        self.pixwin_temp, self.pixwin_pol = hp.sphtfunc.pixwin(self.nside, pol=True)
         if verbose: print("Including the healpix pixel window function.")
-        if self.has_temp: self.pixwin_T = self.pixwin_T[:len(self.beam_temp)]
-        if self.has_pol: self.pixwin_P = self.pixwin_P[:len(self.beam_pol)]
+        if self.has_temp: self.pixwin_temp = self.pixwin_temp[:len(self.beam_temp)]
+        if self.has_pol: self.pixwin_pol = self.pixwin_pol[:len(self.beam_pol)]
         
         # this is written so that the beam is kept separate from the pixel window
-        if self.has_temp: 
-            self.beam_temp[:len(self.pixwin_T)] *= self.pixwin_T
-        if self.has_pol: 
-            self.beam_pol[:len(self.pixwin_P)] *= self.pixwin_P
+        if self.has_temp:
+            beam_temp = beam_temp[:len(self.pixwin_T)] * self.pixwin_T
+        if self.has_pol:
+            beam_pol = beam_pol[:len(self.pixwin_P)] * self.pixwin_P
         
         # construct the a_lm of the maps, depending on what data is available
         if verbose: print("Computing spherical harmonics.\n")
         if self.has_temp:
             self.field_spin0 = nmt.NmtField(
                 self.mask_temp, [self.map_I],
-                beam=self.beam_temp, n_iter=n_iter)
+                beam=beam_temp, n_iter=n_iter)
         if self.has_pol:
             self.field_spin2 = nmt.NmtField(
                 self.mask_pol, [self.map_Q, self.map_U],
-                beam=self.beam_pol, n_iter=n_iter)
+                beam=beam_pol, n_iter=n_iter)
             
 
 class mode_coupling:
@@ -362,6 +359,9 @@ class mode_coupling:
             Specify a directory which contains the workspace files for this 
             mode-coupling object.
         """
+        if bins is None and mcm_dir is None:
+            raise ValueError("Must specify binning, unless loading from disk.")
+        
 
         if mcm_dir is not None:
             self.load_from_dir(mcm_dir)
@@ -532,8 +532,8 @@ def read_bins(file, lmax=7925, is_Dell=False):
     return b
 
 
-def get_unbinned_bins(lmax, nside=None):
-    """Generate an unbinned NaMaster binning for l>1.
+def get_unbinned_bins(lmax, nside=None, lmin=2):
+    """Generate an unbinned NaMaster binning.
 
     Parameters
     ----------
@@ -550,7 +550,7 @@ def get_unbinned_bins(lmax, nside=None):
 
     """
     bpws_ell = np.arange(lmax+1)
-    bpws = bpws_ell - 2  # array of bandpower indices
+    bpws = bpws_ell - lmin  # array of bandpower indices
     bpws[bpws < 0] = -1  # set ell=0,1 to -1 : i.e. not included
     weights = np.ones_like(bpws)
     if nside is None:

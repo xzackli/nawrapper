@@ -8,26 +8,27 @@ import os
 
 param_2018 = {
     'pol_efficiency' : {'100' : 0.9995, '143' : 0.999, '217' : 0.999},
-    'map_dir' : 'maps/PR3/frequencyMaps',  # relative to base directory
-    'mask_dir' : 'maps/PR3/maskMaps/',  # relative to base directory
-    'beam_dir' : 'BeamWf_HFI_R3.01/',  # relative to base directory
     'nside' : 2048,
     'lmax' : 2508
 }
 
-def load_planck_data(base_data_dir, par=param_2018, 
+def load_planck_data(map_dir, mask_dir, beam_dir, par=None,
                      freq1='143', freq2='143', split1='1', split2='2'):
     
-    map_dir, mask_dir, beam_dir = par['map_dir'], par['mask_dir'], par['beam_dir']
+    # make sure we're not updating with None
+    if par is None: par={}
+    
+    # update default parameters
+    base_par_copy = param_2018.copy()
+    par.update(base_par_copy)
+    par = base_par_copy
+    print(par)
+    
     nside = par['nside']
     
     # read effective cross beams
-    # beams are only available as f1 x f2 with f1 \leq f2
+    # beam files are only available as f1 x f2 with f1 \leq f2
     # splits are only 1 x 1, 1 x 2, 2 x 2 (i.e. no 2 x 1)
-
-    beam_dir = os.path.join(base_data_dir, beam_dir)
-    map_dir = os.path.join(base_data_dir, map_dir)
-    mask_dir = os.path.join(base_data_dir, mask_dir)
 
     if int(freq1) < int(freq2):
         beam_Wl_hdu = fits.open(
@@ -35,7 +36,7 @@ def load_planck_data(base_data_dir, par=param_2018,
                 freq1 + 'hm' + split1 + 'x' + freq2 + 'hm' + split2 + '.fits'))
     elif int(freq1) > int(freq2):
         beam_Wl_hdu = fits.open(
-            os.path.join(beam_dir, ('/Wl_R3.01_plikmask_' + 
+            os.path.join(beam_dir, ('Wl_R3.01_plikmask_' + 
                 freq2+'hm'+split2+'x'+freq1+'hm'+split1+'.fits')))
     else: # they are equal
         if int(split1) > int(split2):
@@ -45,33 +46,26 @@ def load_planck_data(base_data_dir, par=param_2018,
             beam_Wl_hdu = fits.open(os.path.join(beam_dir, ('Wl_R3.01_plikmask_' + 
                 freq1+'hm'+split1+'x'+freq2+'hm'+split2+'.fits')))
     
-    beam_temp = np.sqrt(beam_Wl_hdu[1].data['TT_2_TT'][0])
-    beam_pol = np.sqrt(beam_Wl_hdu[2].data['EE_2_EE'][0])
+    beam_TT = np.sqrt(beam_Wl_hdu[1].data['TT_2_TT'][0])
+    beam_EE = np.sqrt(beam_Wl_hdu[2].data['EE_2_EE'][0])
     
-    mfile_1 = map_dir + ('HFI_SkyMap_'+freq1+
-            '_2048_R3.01_halfmission-'+split1+'.fits')
-    mfile_2 = map_dir + ('HFI_SkyMap_'+freq2+ 
-            '_2048_R3.01_halfmission-'+split2+'.fits')
+    mfile_1 = os.path.join(map_dir, ('HFI_SkyMap_'+freq1+
+            '_2048_R3.01_halfmission-'+split1+'.fits'))
+    mfile_2 = os.path.join(map_dir, ('HFI_SkyMap_'+freq2+ 
+            '_2048_R3.01_halfmission-'+split2+'.fits'))
 
     maskfile1 = os.path.join(mask_dir, 
-        ('/COM_Mask_Likelihood-temperature-'+freq1+'-hm'+split1+'_2048_R3.00.fits'))
+        ('COM_Mask_Likelihood-temperature-'+freq1+'-hm'+split1+'_2048_R3.00.fits'))
     maskfile2 = os.path.join(mask_dir, 
-        ('/COM_Mask_Likelihood-temperature-'+freq2+'-hm'+split2+'_2048_R3.00.fits'))
+        ('COM_Mask_Likelihood-temperature-'+freq2+'-hm'+split2+'_2048_R3.00.fits'))
     maskfile1_pol = os.path.join(mask_dir, 
-        ('/COM_Mask_Likelihood-polarization-'+freq1+'-hm'+split1+'_2048_R3.00.fits'))
+        ('COM_Mask_Likelihood-polarization-'+freq1+'-hm'+split1+'_2048_R3.00.fits'))
     maskfile2_pol = os.path.join(mask_dir, 
-        ('/COM_Mask_Likelihood-polarization-'+freq2+'-hm'+split2+'_2048_R3.00.fits'))
+        ('COM_Mask_Likelihood-polarization-'+freq2+'-hm'+split2+'_2048_R3.00.fits'))
     
     # read maps
-    pol_fac_1 = par['pol_efficiency'][freq1]
-    m1_map_I = hp.read_map(mfile_1, field=0, verbose=False)
-    m1_map_Q = hp.read_map(mfile_1, field=1, verbose=False) * pol_fac_1
-    m1_map_U = hp.read_map(mfile_1, field=2, verbose=False) * pol_fac_1
-
-    pol_fac_2 = par['pol_efficiency'][freq2]
-    m2_map_I = hp.read_map(mfile_2, field=0, verbose=False)
-    m2_map_Q = hp.read_map(mfile_2, field=1, verbose=False) * pol_fac_2
-    m2_map_U = hp.read_map(mfile_2, field=2, verbose=False) * pol_fac_2
+    maps_1 = hp.read_map(mfile_1, field=(0,1,2), verbose=False)
+    maps_2 = hp.read_map(mfile_2, field=(0,1,2), verbose=False)
 
     # read masks
     mask1 = hp.read_map(maskfile1, verbose=False)
@@ -79,18 +73,33 @@ def load_planck_data(base_data_dir, par=param_2018,
     mask1_pol = hp.read_map(maskfile1_pol, verbose=False)
     mask2_pol = hp.read_map(maskfile2_pol, verbose=False)
     
-    # SHTs on maps
-    m1 = nw.namap(
-        map_I=m1_map_I, mask=mask1, beam=beam_temp, 
-        map_Q=m1_map_Q, map_U=m1_map_U, mask_pol=mask1_pol, beam_pol=beam_pol,
-        unpixwin=True,
-        nside=nside, sub_monopole=True, sub_dipole=True)
-    m2 = nw.namap(
-        map_I=m2_map_I, mask=mask2, beam=beam_temp, 
-        map_Q=m2_map_Q, map_U=m2_map_U, mask_pol=mask2_pol, beam_pol=beam_pol,
-        unpixwin=True,
-        nside=nside, sub_monopole=True, sub_dipole=True)
+    # apply hard mask for missing pixels
+    missing_pixel_1 = (maps_1[0] < -1e30)
+    missing_pixel_2 = (maps_2[0] < -1e30)
     
+    for i in range(3):
+        maps_1[i][missing_pixel_1] = 0.0
+        maps_2[i][missing_pixel_2] = 0.0
+        
+        if i > 0:
+            map_fac_1 = par['pol_efficiency'][freq1]
+            map_fac_2 = par['pol_efficiency'][freq2]
+        else:
+            map_fac_1, map_fac_2 = 1.0, 1.0
+        
+        maps_1[i] *= (1e6 * map_fac_1)
+        maps_2[i] *= (1e6 * map_fac_2)
+
+    maps_1[0] = nw.maptools.sub_mono_di(maps_1[0], mask1, nside)
+    maps_2[0] = nw.maptools.sub_mono_di(maps_2[0], mask2, nside)
+    
+    m1 = nw.namap_hp(
+        maps=maps_1, masks=(mask1, mask1_pol), 
+        beams=(beam_TT, beam_EE), unpixwin=True)
+    m2 = nw.namap_hp(
+        maps=maps_2, masks=(mask2, mask2_pol), 
+        beams=(beam_TT, beam_EE), unpixwin=True)
+
     return m1, m2
 
 
