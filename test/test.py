@@ -42,11 +42,11 @@ def test_cov_TT():
     cov.compute()
     
     # test the covariance
-    assert (np.std(np.sqrt(np.diag(cov.covar_TT_TT))[40:120] / 
+    assert (np.std(np.sqrt(np.diag(cov.covmat['TTTT']))[40:120] / 
                    np.std(samples, axis=0)[40:120]
             )) < 0.3
     
-    assert abs(np.mean(np.sqrt(np.diag(cov.covar_TT_TT))[40:120] / 
+    assert abs(np.mean(np.sqrt(np.diag(cov.covmat['TTTT']))[40:120] / 
                np.std(samples, axis=0)[40:120]
         ) - 1 ) < 0.05
 
