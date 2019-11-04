@@ -14,24 +14,24 @@ def compute_spectra(namap1, namap2,
                     bins=None, mc=None, lmax=None, verbose=True):
     r"""Compute all of the spectra between two maps.
 
-    This computes all cross spectra between two :py:class:`nawrapper.ps.namap`
+    This computes all cross spectra between two :py:class:`nawrapper.power.abstract_namap`
     for which there is information. For example, TE spectra will be computed
     only if the first map has a temperature map, and the second has a
     polarization map.
 
     Parameters
     ----------
-    namap1 : :py:class:`nawrapper.ps.namap` object.
+    namap1 : :py:class:`nawrapper.power.namap_hp` or :py:class:`nawrapper.ps.namap_car`.
         The first map to compute correlations with.
-    namap2 : :py:class:`nawrapper.ps.namap` object.
+    namap2 : :py:class:`nawrapper.power.namap_hp` or :py:class:`nawrapper.ps.namap_car`.
         To be correlated with `namap1`.
     bins : NaMaster NmtBin object (optional)
         At least one of `bins` or `mc` must be specified. If you specify
-        `bins` (possibly from the output of :py:func:`nawrapper.ps.read_bins`)
+        `bins` (possibly from the output of :py:func:`nawrapper.power.read_bins`)
         then a new mode coupling matrix will be computed within this function
         call. If you have already computed a relevant mode-coupling matrix,
         then pass `mc` instead.
-    mc : :py:class:`nawrapper.ps.mode_coupling` object (optional)
+    mc : :py:class:`nawrapper.power.mode_coupling` object (optional)
         This object contains precomputed mode-coupling matrices.
 
     Returns
@@ -282,7 +282,10 @@ class namap_car(abstract_namap):
         # needed to reproduce steve's spectra
         if legacy_steve:
             self.map_I.wcs.wcs.crpix += np.array([-1, -1])
+            self.map_Q.wcs.wcs.crpix += np.array([-1, -1])
+            self.map_U.wcs.wcs.crpix += np.array([-1, -1])
             if verbose: print('Applying legacy_steve correction.')
+        
         self.extract_and_filter_CAR(kx, ky, kspace_apo,
                                     legacy_steve, unpixwin, verbose=verbose)
 
