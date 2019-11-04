@@ -341,37 +341,37 @@ class namap_hp(abstract_namap):
 
     def __init__(self, maps, masks=None, beams=None, unpixwin=True, 
                  verbose=True, n_iter=3):
-    r"""Generate a healpix map container
+        r"""Generate a healpix map container
 
-    This bundles healpix pixelization map products, in particular
+        This bundles healpix pixelization map products, in particular
 
-    1. IQU maps
-    2. mask, referring to the product of hits, point source mask, etc.
-    3. beam transfer function
+        1. IQU maps
+        2. mask, referring to the product of hits, point source mask, etc.
+        3. beam transfer function
 
-    Parameters
-    ----------
-    maps : ndarray or tuple
-        The maps you want to operate on. This needs to be a tuple of 
-        length 3, or an array of length `(3,) + map.shape`. 
-    masks : ndarray or tuple
-        The masks you want to operate on.
-    beams: list or tuple
-        The beams you want to use.
-    unpixwin: bool
-        If true, we account for the pixel window function when computing 
-        power spectra. For healpix this is accomplished by modifying the 
-        beam in-place.
-    n_iter : int
-        Number of spherical harmonic iterations, because healpix is not
-        a very good pixellization.
-    verbose : bool
-        Print various information about what is being assumed. You should
-        probably enable this the first time you try to run a particular 
-        scenario, but you can set this to false if you find it's annoying 
-        to have it printing so much stuff, like if you are computing many 
-        spectra in a loop.
-    """
+        Parameters
+        ----------
+        maps : ndarray or tuple
+            The maps you want to operate on. This needs to be a tuple of 
+            length 3, or an array of length `(3,) + map.shape`. 
+        masks : ndarray or tuple
+            The masks you want to operate on.
+        beams: list or tuple
+            The beams you want to use.
+        unpixwin: bool
+            If true, we account for the pixel window function when computing 
+            power spectra. For healpix this is accomplished by modifying the 
+            beam in-place.
+        n_iter : int
+            Number of spherical harmonic iterations, because healpix is not
+            a very good pixellization.
+        verbose : bool
+            Print various information about what is being assumed. You should
+            probably enable this the first time you try to run a particular 
+            scenario, but you can set this to false if you find it's annoying 
+            to have it printing so much stuff, like if you are computing many 
+            spectra in a loop.
+        """
         
         super(namap_hp, self).__init__(
             maps=maps, masks=masks, beams=beams,
