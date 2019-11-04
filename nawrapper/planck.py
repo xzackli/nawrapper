@@ -12,7 +12,7 @@ param_2018 = {
     'lmax' : 2508
 }
 
-def load_planck_data(map_dir, mask_dir, beam_dir, par=None,
+def load_planck_half_missions(map_dir, mask_dir, beam_dir, par=None,
                      freq1='143', freq2='143', split1='1', split2='2'):
     
     # make sure we're not updating with None
@@ -68,39 +68,51 @@ def load_planck_data(map_dir, mask_dir, beam_dir, par=None,
     maps_2 = hp.read_map(mfile_2, field=(0,1,2), verbose=False)
 
     # read masks
-    mask1 = hp.read_map(maskfile1, verbose=False)
-    mask2 = hp.read_map(maskfile2, verbose=False)
-    mask1_pol = hp.read_map(maskfile1_pol, verbose=False)
-    mask2_pol = hp.read_map(maskfile2_pol, verbose=False)
+    masks_1 = (
+        hp.read_map(maskfile1, verbose=False),
+        hp.read_map(maskfile1_pol, verbose=False))
+    masks_2 = (
+        hp.read_map(maskfile2, verbose=False),
+        hp.read_map(maskfile2_pol, verbose=False))
+    beams = (beam_TT, beam_EE)
     
-    # apply hard mask for missing pixels
-    missing_pixel_1 = (maps_1[0] < -1e30)
-    missing_pixel_2 = (maps_2[0] < -1e30)
+    return maps_1, masks_1, maps_2, masks_2, beams
     
+#     preprocess_maps(maps_1, masks_1, (maps_1[0] < -1e30)
+#                     par['pol_efficiency'][freq1], nside)
+#     preprocess_maps(maps_2, masks_2, (maps_1[0] < -1e30)
+#                     par['pol_efficiency'][freq2], nside)
+    
+#     m1 = nw.namap_hp(
+#         maps=maps_1, masks=masks_1, 
+#         beams=(beam_TT, beam_EE), unpixwin=True)
+#     m2 = nw.namap_hp(
+#         maps=maps_2, masks=masks_2, 
+#         beams=(beam_TT, beam_EE), unpixwin=True)
+
+#     return m1, m2
+
+
+def preprocess_maps(maps, masks, missing_pixel, pol_eff, nside):
+    
+    maps = np.array(maps, copy=True)
+    masks = np.array(masks, copy=True)
+    
+    masks[0][missing_pixel] = 0.0
+    masks[1][missing_pixel] = 0.0
+    
+    # convert to muK
     for i in range(3):
-        maps_1[i][missing_pixel_1] = 0.0
-        maps_2[i][missing_pixel_2] = 0.0
-        
         if i > 0:
-            map_fac_1 = par['pol_efficiency'][freq1]
-            map_fac_2 = par['pol_efficiency'][freq2]
+            maps[i] *= (1e6 * pol_eff)
         else:
-            map_fac_1, map_fac_2 = 1.0, 1.0
-        
-        maps_1[i] *= (1e6 * map_fac_1)
-        maps_2[i] *= (1e6 * map_fac_2)
+            maps[i] *= 1e6
 
-    maps_1[0] = nw.maptools.sub_mono_di(maps_1[0], mask1, nside)
-    maps_2[0] = nw.maptools.sub_mono_di(maps_2[0], mask2, nside)
+    # subtract monopole from temperature
+    maps[0] = nw.maptools.sub_mono_di(maps[0], masks[0], nside)
     
-    m1 = nw.namap_hp(
-        maps=maps_1, masks=(mask1, mask1_pol), 
-        beams=(beam_TT, beam_EE), unpixwin=True)
-    m2 = nw.namap_hp(
-        maps=maps_2, masks=(mask2, mask2_pol), 
-        beams=(beam_TT, beam_EE), unpixwin=True)
+    return maps, masks
 
-    return m1, m2
 
 
 class PlanckCov:

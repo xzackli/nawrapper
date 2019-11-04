@@ -42,12 +42,12 @@ def compute_spectra(namap1, namap2,
 
     """
     
-    if bins is None and mc is None and lmax is None:
+    if (bins is None) and (mc is None) and (lmax is None):
         raise ValueError(
             "You must specify either a binning, lmax, "
             "or a mode coupling object.")
         
-    if lmax is not None and bins is None and mc is None:
+    if (lmax is not None) and (bins is None) and (mc is None):
         if verbose: 
             print("Assuming unbinned and computing the mode coupling matrix.")
         bins = get_unbinned_bins(lmax) # will choose lmax, nside ignored
@@ -212,6 +212,7 @@ class abstract_namap():
                 beam_pol[:len(self.beam_pol)] = self.beam_pol
                 beam_pol[len(self.beam_pol):] = self.beam_pol[-1]
             self.beam_pol = beam_pol
+
 
 class namap_car(abstract_namap):
     r"""Map container for CAR pixellization
