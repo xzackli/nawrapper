@@ -89,37 +89,37 @@ class abstract_namap():
     @abc.abstractmethod
     def __init__(self, maps, masks=None, beams=None, 
                  unpixwin=True, verbose=True):
-        r"""Generic abstract 
+#         r"""Generic abstract 
 
-        Objects which inherit from this will organize the various ingredients 
-        that are required for a map to be used in power spectra analysis. 
-        Each map has an associated
+#         Objects which inherit from this will organize the various ingredients 
+#         that are required for a map to be used in power spectra analysis. 
+#         Each map has an associated
 
-        1. IQU maps
-        2. mask, referring to the product of hits, point source mask, etc.
-        3. beam transfer function
+#         1. IQU maps
+#         2. mask, referring to the product of hits, point source mask, etc.
+#         3. beam transfer function
 
-        Parameters
-        ----------
-        maps : ndarray or tuple
-            The maps you want to operate on. This needs to be a tuple of 
-            length 3, or an array of length `(3,) + map.shape`. 
-        masks : ndarray or tuple
-            The masks you want to operate on.
-        beams: list or tuple
-            The beams you want to use.
-        unpixwin: bool
-            If true, we account for the pixel window function when computing 
-            power spectra. For healpix this is accomplished by modifying the 
-            beam in-place.
-        verbose : bool
-            Print various information about what is being assumed. You should
-            probably enable this the first time you try to run a particular 
-            scenario, but you can set this to false if you find it's annoying 
-            to have it printing so much stuff, like if you are computing many 
-            spectra in a loop.
+#         Parameters
+#         ----------
+#         maps : ndarray or tuple
+#             The maps you want to operate on. This needs to be a tuple of 
+#             length 3, or an array of length `(3,) + map.shape`. 
+#         masks : ndarray or tuple
+#             The masks you want to operate on.
+#         beams: list or tuple
+#             The beams you want to use.
+#         unpixwin: bool
+#             If true, we account for the pixel window function when computing 
+#             power spectra. For healpix this is accomplished by modifying the 
+#             beam in-place.
+#         verbose : bool
+#             Print various information about what is being assumed. You should
+#             probably enable this the first time you try to run a particular 
+#             scenario, but you can set this to false if you find it's annoying 
+#             to have it printing so much stuff, like if you are computing many 
+#             spectra in a loop.
 
-        """
+#         """
 
         # check the input to make sure nothing funny is happening. we want
         # input tuples! A tuple of three maps.
