@@ -228,7 +228,45 @@ class namap_car(abstract_namap):
     def __init__(self, maps, masks=None, beams=None, 
                  unpixwin=True, kx=0, ky=0, kspace_apo=40, legacy_steve=False, 
                  verbose=True, sub_shape=None, sub_wcs=None):
+        r"""Generate a CAR map container
 
+        This bundles CAR pixelization map products, in particular
+
+        1. IQU maps
+        2. mask, referring to the product of hits, point source mask, etc.
+        3. beam transfer function
+
+        Parameters
+        ----------
+        maps : ndarray or tuple
+            The maps you want to operate on. This needs to be a tuple of 
+            length 3, or an array of length `(3,) + map.shape`. 
+        masks : ndarray or tuple
+            The masks you want to operate on.
+        beams: list or tuple
+            The beams you want to use.
+        unpixwin: bool
+            If true, we account for the pixel window function when computing 
+            power spectra. For healpix this is accomplished by modifying the 
+            beam in-place.
+        kx : float
+            k-space horizontal filter mode, ky-modes with absolute value less than
+            kx are filtered.
+        kx : float
+            k-space vertical filter mode, kx-modes with absolute value less than
+            ky are filtered.
+        kspace_apo : float
+            optional parameter specifying width of apodization
+        legacy_steve : bool
+            Shifts the mask by 1,1 relative to the maps to preproduce Steve's code.
+        verbose : bool
+            Print various information about what is being assumed. You should
+            probably enable this the first time you try to run a particular 
+            scenario, but you can set this to false if you find it's annoying 
+            to have it printing so much stuff, like if you are computing many 
+            spectra in a loop.
+        """
+            
         super(namap_car, self).__init__(
             maps=maps, masks=masks, beams=beams, 
             unpixwin=unpixwin, verbose=verbose)
@@ -302,8 +340,39 @@ class namap_car(abstract_namap):
 class namap_hp(abstract_namap):
 
     def __init__(self, maps, masks=None, beams=None, unpixwin=True, 
-                 sub_monopole=True, sub_dipole=False, verbose=True, n_iter=3):
+                 verbose=True, n_iter=3):
+    r"""Generate a healpix map container
 
+    This bundles healpix pixelization map products, in particular
+
+    1. IQU maps
+    2. mask, referring to the product of hits, point source mask, etc.
+    3. beam transfer function
+
+    Parameters
+    ----------
+    maps : ndarray or tuple
+        The maps you want to operate on. This needs to be a tuple of 
+        length 3, or an array of length `(3,) + map.shape`. 
+    masks : ndarray or tuple
+        The masks you want to operate on.
+    beams: list or tuple
+        The beams you want to use.
+    unpixwin: bool
+        If true, we account for the pixel window function when computing 
+        power spectra. For healpix this is accomplished by modifying the 
+        beam in-place.
+    n_iter : int
+        Number of spherical harmonic iterations, because healpix is not
+        a very good pixellization.
+    verbose : bool
+        Print various information about what is being assumed. You should
+        probably enable this the first time you try to run a particular 
+        scenario, but you can set this to false if you find it's annoying 
+        to have it printing so much stuff, like if you are computing many 
+        spectra in a loop.
+    """
+        
         super(namap_hp, self).__init__(
             maps=maps, masks=masks, beams=beams,
             unpixwin=unpixwin, verbose=verbose)
