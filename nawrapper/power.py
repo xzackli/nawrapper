@@ -317,9 +317,9 @@ class namap_hp(abstract_namap):
         
         # this is written so that the beam is kept separate from the pixel window
         if self.has_temp:
-            beam_temp = beam_temp[:len(self.pixwin_T)] * self.pixwin_T
+            beam_temp = self.beam_temp[:len(self.pixwin_T)] * self.pixwin_T
         if self.has_pol:
-            beam_pol = beam_pol[:len(self.pixwin_P)] * self.pixwin_P
+            beam_pol = self.beam_pol[:len(self.pixwin_P)] * self.pixwin_P
         
         # construct the a_lm of the maps, depending on what data is available
         if verbose: print("Computing spherical harmonics.\n")
