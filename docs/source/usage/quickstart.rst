@@ -113,13 +113,13 @@ For additional realism we generate noise power spectra to add to our "splits".
   :scale: 60%
 
 For this example, we won't include a beam. Now we set up the
-:py:class:`nawrapper.ps.namap` objects, using as input our
+:py:class:`nawrapper.ps.namap_car` objects, using as input our
 our original random realization summed with the noise realizations.
 
 .. code:: python
 
-  namap_1 = nw.namap(map_I=imap + noise_map_1, mask=mask)
-  namap_2 = nw.namap(map_I=imap + noise_map_2, mask=mask)
+  namap_1 = nw.namap_car(maps=imap + noise_map_1, masks=mask)
+  namap_2 = nw.namap_car(maps=imap + noise_map_2, masks=mask)
 
 Next we compute the mode-coupling matrix. We need the binning file, which
 we have in the `repository`_ under `notebooks/data/`. You'll need to point it to

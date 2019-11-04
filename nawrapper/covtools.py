@@ -90,6 +90,7 @@ class nacov:
         # every combination of masks. For ACT this is basically every time.
         
         namap1, namap2, mc = self.namap1, self.namap2, self.mc
+        self.covmat = {}
         
         if namap1.has_temp and namap2.has_temp:
             # TT
@@ -98,18 +99,18 @@ class nacov:
                 namap1.field_spin0, namap2.field_spin0, 
                 lmax=self.lmax)
 
-            beam_tt = (namap1.beam_temp[:self.lmax+1] * namap2.beam_temp[:self.lmax+1] *
-                       namap1.pixwin_temp[:self.lmax+1] * namap2.pixwin_temp[:self.lmax+1])
+            beam_spin00_map1 = namap1.beam_temp[:self.lmax+1] * namap1.pixwin_temp[:self.lmax+1]
+            beam_spin00_map2 = namap2.beam_temp[:self.lmax+1] * namap2.pixwin_temp[:self.lmax+1]
             covar_00_00 = nmt.gaussian_covariance(
                 self.cw00,
                 0, 0, 0, 0,  # Spins of the 4 fields
-                [(self.signal['TT'] + self.noise['TT_1']) * beam_tt],  # TT
-                [self.signal['TT'] * beam_tt],  # TT
-                [self.signal['TT'] * beam_tt],  # TT
-                [(self.signal['TT'] + self.noise['TT_2']) * beam_tt],  # TT
+                [(self.signal['TT'] + self.noise['TT_1']) * beam_spin00_map1 * beam_spin00_map1],  # TT
+                [self.signal['TT'] * beam_spin00_map1 * beam_spin00_map2],  # TT
+                [self.signal['TT'] * beam_spin00_map2 * beam_spin00_map1],  # TT
+                [(self.signal['TT'] + self.noise['TT_2']) * beam_spin00_map2 * beam_spin00_map2],  # TT
                 mc.w00, wb=mc.w00).reshape([self.num_ell, 1,
                                             self.num_ell, 1])
-            self.covar_TT_TT = covar_00_00[:, 0, :, 0]
+            self.covmat['TTTT'] = covar_00_00[:, 0, :, 0]
         
         ## EE
         if namap1.has_pol and namap2.has_pol:
@@ -118,37 +119,103 @@ class nacov:
                 namap1.field_spin2, namap2.field_spin2, 
                 lmax=self.lmax)
 
-            beam_ee = (namap1.beam_pol[:self.lmax+1] * namap2.beam_pol[:self.lmax+1] *
-                       namap1.pixwin_pol[:self.lmax+1] * namap2.pixwin_pol[:self.lmax+1])
+            beam_spin22_map1 = namap1.beam_pol[:self.lmax+1] * namap1.pixwin_pol[:self.lmax+1]
+            beam_spin22_map2 = namap2.beam_pol[:self.lmax+1] * namap2.pixwin_pol[:self.lmax+1]
             covar_22_22 = nmt.gaussian_covariance(
                 self.cw22, 2, 2, 2, 2,  # Spins of the 4 fields
-                [(self.signal['EE']+self.noise['EE_1']) * beam_ee, (self.signal['EB']) * beam_ee,
-                 (self.signal['EB']) * beam_ee, (self.signal['BB']+self.noise['BB_1']) * beam_ee],  # EE, EB, BE, BB
-                [(self.signal['EE']) * beam_ee, (self.signal['EB']) * beam_ee,
-                 (self.signal['EB']) * beam_ee, (self.signal['EB']) * beam_ee],  # EE, EB, BE, BB
-                [(self.signal['EE']) * beam_ee, (self.signal['EB']) * beam_ee,
-                 (self.signal['EB']) * beam_ee, (self.signal['EB']) * beam_ee],  # EE, EB, BE, BB
-                [(self.signal['EE']+self.noise['EE_1']) * beam_ee, (self.signal['EB']) * beam_ee,
-                 (self.signal['EB']) * beam_ee, (self.signal['BB']+self.noise['BB_2']) * beam_ee],  # EE, EB, BE, BB
+                [(self.signal['EE']+self.noise['EE_1']) * beam_spin22_map1 * beam_spin22_map1, 
+                 (self.signal['EB']) * beam_spin22_map1 * beam_spin22_map1,
+                 (self.signal['EB']) * beam_spin22_map1 * beam_spin22_map1, 
+                 (self.signal['BB']+self.noise['BB_1']) * beam_spin22_map1 * beam_spin22_map1],  # EE, EB, BE, BB
+                
+                [(self.signal['EE']) * beam_spin22_map1 * beam_spin22_map2, 
+                 (self.signal['EB']) * beam_spin22_map1 * beam_spin22_map2,
+                 (self.signal['EB']) * beam_spin22_map1 * beam_spin22_map2, 
+                 (self.signal['EB']) * beam_spin22_map1 * beam_spin22_map2],  # EE, EB, BE, BB
+                
+                [(self.signal['EE']) * beam_spin22_map2 * beam_spin22_map1, 
+                 (self.signal['EB']) * beam_spin22_map2 * beam_spin22_map1,
+                 (self.signal['EB']) * beam_spin22_map2 * beam_spin22_map1, 
+                 (self.signal['EB']) * beam_spin22_map2 * beam_spin22_map1],  # EE, EB, BE, BB
+                
+                [(self.signal['EE']+self.noise['EE_1']) * beam_spin22_map2 * beam_spin22_map2, 
+                 (self.signal['EB'])                    * beam_spin22_map2 * beam_spin22_map2,
+                 (self.signal['EB'])                    * beam_spin22_map2 * beam_spin22_map2, 
+                 (self.signal['BB']+self.noise['BB_2']) * beam_spin22_map2 * beam_spin22_map2],  # EE, EB, BE, BB
+                
                 mc.w22, wb=mc.w22).reshape([self.num_ell, 4,
                                       self.num_ell, 4])
 
-            self.covar_EE_EE = covar_22_22[:, 0, :, 0]
-            self.covar_EE_EB = covar_22_22[:, 0, :, 1]
-            self.covar_EE_BE = covar_22_22[:, 0, :, 2]
-            self.covar_EE_BB = covar_22_22[:, 0, :, 3]
-            self.covar_EB_EE = covar_22_22[:, 1, :, 0]
-            self.covar_EB_EB = covar_22_22[:, 1, :, 1]
-            self.covar_EB_BE = covar_22_22[:, 1, :, 2]
-            self.covar_EB_BB = covar_22_22[:, 1, :, 3]
-            self.covar_BE_EE = covar_22_22[:, 2, :, 0]
-            self.covar_BE_EB = covar_22_22[:, 2, :, 1]
-            self.covar_BE_BE = covar_22_22[:, 2, :, 2]
-            self.covar_BE_BB = covar_22_22[:, 2, :, 3]
-            self.covar_BB_EE = covar_22_22[:, 3, :, 0]
-            self.covar_BB_EB = covar_22_22[:, 3, :, 1]
-            self.covar_BB_BE = covar_22_22[:, 3, :, 2]
-            self.covar_BB_BB = covar_22_22[:, 3, :, 3]
+            self.covmat['EE_EE'] = covar_22_22[:, 0, :, 0]
+            self.covmat['EE_EB'] = covar_22_22[:, 0, :, 1]
+            self.covmat['EE_BE'] = covar_22_22[:, 0, :, 2]
+            self.covmat['EE_BB'] = covar_22_22[:, 0, :, 3]
+            self.covmat['EB_EE'] = covar_22_22[:, 1, :, 0]
+            self.covmat['EB_EB'] = covar_22_22[:, 1, :, 1]
+            self.covmat['EB_BE'] = covar_22_22[:, 1, :, 2]
+            self.covmat['EB_BB'] = covar_22_22[:, 1, :, 3]
+            self.covmat['BE_EE'] = covar_22_22[:, 2, :, 0]
+            self.covmat['BE_EB'] = covar_22_22[:, 2, :, 1]
+            self.covmat['BE_BE'] = covar_22_22[:, 2, :, 2]
+            self.covmat['BE_BB'] = covar_22_22[:, 2, :, 3]
+            self.covmat['BB_EE'] = covar_22_22[:, 3, :, 0]
+            self.covmat['BB_EB'] = covar_22_22[:, 3, :, 1]
+            self.covmat['BB_BE'] = covar_22_22[:, 3, :, 2]
+            self.covmat['BB_BB'] = covar_22_22[:, 3, :, 3]
+            
+                
+#         ## TETE
+#         beam_02 = (namap1.beam_temp[:self.lmax+1] * namap2.beam_pol[:self.lmax+1] *
+#                        namap1.pixwin_temp[:self.lmax+1] * namap2.pixwin_pol[:self.lmax+1])
+#         beam_20 = (namap1.beam_temp[:self.lmax+1] * namap2.beam_pol[:self.lmax+1] *
+#                        namap1.pixwin_temp[:self.lmax+1] * namap2.pixwin_pol[:self.lmax+1])
+        
+#         if namap1.has_temp and namap2.has_pol:
+#             covar_02_02 = nmt.gaussian_covariance(cw, 0, 2, 0, 2,  # Spins of the 4 fields
+#                                           [cl_tt],  # TT
+#                                           [cl_te, cl_tb],  # TE, TB
+#                                           [cl_te, cl_tb],  # ET, BT
+#                                           [cl_ee, cl_eb,
+#                                            cl_eb, cl_bb],  # EE, EB, BE, BB
+#                                           w02, wb=w02).reshape([n_ell, 2,
+#                                                                 n_ell, 2])
+#             self.covmat['TETE'] = covar_02_02[:, 0, :, 0]
+#             self.covmat['TETB'] = covar_02_02[:, 0, :, 1]
+#             self.covmat['TBTE'] = covar_02_02[:, 1, :, 0]
+#             self.covmat['TBTB'] = covar_02_02[:, 1, :, 1]
+
+#         # off diagonals
+#         if (namap1.has_temp and namap1.has_pol) and (namap2.has_temp and namap2.has_pol):
+#             covar_00_22 = nmt.gaussian_covariance(cw, 0, 0, 2, 2,  # Spins of the 4 fields
+#                                                   [cl_te, cl_tb],  # TE, TB
+#                                                   [cl_te, cl_tb],  # TE, TB
+#                                                   [cl_te, cl_tb],  # TE, TB
+#                                                   [cl_te, cl_tb],  # TE, TB
+#                                                   w00, wb=w22).reshape([n_ell, 1,
+#                                                                         n_ell, 4])
+#             self.covmat['TTEE'] = covar_00_22[:, 0, :, 0]
+#             self.covmat['TTEB'] = covar_00_22[:, 0, :, 1]
+#             self.covmat['TTBE'] = covar_00_22[:, 0, :, 2]
+#             self.covmat['TTBB'] = covar_00_22[:, 0, :, 3]
+        
+#         if namap1.has_temp and namap1.has_pol and namap2.has_pol:
+#             covar_02_22 = nmt.gaussian_covariance(cw, 0, 2, 2, 2,  # Spins of the 4 fields
+#                                                   [cl_te, cl_tb],  # TE, TB
+#                                                   [cl_te, cl_tb],  # TE, TB
+#                                                   [cl_ee, cl_eb,
+#                                                    cl_eb, cl_bb],  # EE, EB, BE, BB
+#                                                   [cl_ee, cl_eb,
+#                                                    cl_eb, cl_bb],  # EE, EB, BE, BB
+#                                                   w02, wb=w22).reshape([n_ell, 2,
+#                                                                         n_ell, 4])
+#             self.covmat['TEEE'] = covar_02_22[:, 0, :, 0]
+#             self.covmat['TEEB'] = covar_02_22[:, 0, :, 1]
+#             self.covmat['TEBE'] = covar_02_22[:, 0, :, 2]
+#             self.covmat['TEBB'] = covar_02_22[:, 0, :, 3]
+#             self.covmat['TBEE'] = covar_02_22[:, 1, :, 0]
+#             self.covmat['TBEB'] = covar_02_22[:, 1, :, 1]
+#             self.covmat['TBBE'] = covar_02_22[:, 1, :, 2]
+#             self.covmat['TBBB'] = covar_02_22[:, 1, :, 3]
         
         
     """Smooth and interpolate a spectrum up to lmax.
