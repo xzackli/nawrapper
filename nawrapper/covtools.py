@@ -146,22 +146,22 @@ class nacov:
                 mc.w22, wb=mc.w22).reshape([self.num_ell, 4,
                                       self.num_ell, 4])
 
-            self.covmat['EE_EE'] = covar_22_22[:, 0, :, 0]
-            self.covmat['EE_EB'] = covar_22_22[:, 0, :, 1]
-            self.covmat['EE_BE'] = covar_22_22[:, 0, :, 2]
-            self.covmat['EE_BB'] = covar_22_22[:, 0, :, 3]
-            self.covmat['EB_EE'] = covar_22_22[:, 1, :, 0]
-            self.covmat['EB_EB'] = covar_22_22[:, 1, :, 1]
-            self.covmat['EB_BE'] = covar_22_22[:, 1, :, 2]
-            self.covmat['EB_BB'] = covar_22_22[:, 1, :, 3]
-            self.covmat['BE_EE'] = covar_22_22[:, 2, :, 0]
-            self.covmat['BE_EB'] = covar_22_22[:, 2, :, 1]
-            self.covmat['BE_BE'] = covar_22_22[:, 2, :, 2]
-            self.covmat['BE_BB'] = covar_22_22[:, 2, :, 3]
-            self.covmat['BB_EE'] = covar_22_22[:, 3, :, 0]
-            self.covmat['BB_EB'] = covar_22_22[:, 3, :, 1]
-            self.covmat['BB_BE'] = covar_22_22[:, 3, :, 2]
-            self.covmat['BB_BB'] = covar_22_22[:, 3, :, 3]
+            self.covmat['EEEE'] = covar_22_22[:, 0, :, 0]
+            self.covmat['EEEB'] = covar_22_22[:, 0, :, 1]
+            self.covmat['EEBE'] = covar_22_22[:, 0, :, 2]
+            self.covmat['EEBB'] = covar_22_22[:, 0, :, 3]
+            self.covmat['EBEE'] = covar_22_22[:, 1, :, 0]
+            self.covmat['EBEB'] = covar_22_22[:, 1, :, 1]
+            self.covmat['EBBE'] = covar_22_22[:, 1, :, 2]
+            self.covmat['EBBB'] = covar_22_22[:, 1, :, 3]
+            self.covmat['BEEE'] = covar_22_22[:, 2, :, 0]
+            self.covmat['BEEB'] = covar_22_22[:, 2, :, 1]
+            self.covmat['BEBE'] = covar_22_22[:, 2, :, 2]
+            self.covmat['BEBB'] = covar_22_22[:, 2, :, 3]
+            self.covmat['BBEE'] = covar_22_22[:, 3, :, 0]
+            self.covmat['BBEB'] = covar_22_22[:, 3, :, 1]
+            self.covmat['BBBE'] = covar_22_22[:, 3, :, 2]
+            self.covmat['BBBB'] = covar_22_22[:, 3, :, 3]
             
                 
 #         ## TETE
