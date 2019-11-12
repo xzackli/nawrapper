@@ -15,7 +15,7 @@ class nacov:
     computation -- the coupling coefficients.
     """
 
-    def __init__(self, namap1, namap2, mc,
+    def __init__(self, namap1, namap2, mc_11, mc_12, mc_22,
                  signal=None, noise=None,
                  smoothing_window=11, smoothing_polyorder=3):
         r"""
@@ -29,11 +29,12 @@ class nacov:
             We use the mask in this namap to compute the mode-coupling matrices.
 
         """
-        self.lmax = mc.bins.lmax
-        self.mc = mc
+        self.lmax = mc_12.bins.lmax
+        self.mc = mc_12
+        lb = mc_12.lb
         self.namap1 = namap1
         self.namap2 = namap2
-        
+
         self.cw00 = nmt.NmtCovarianceWorkspace()
         self.cw02 = nmt.NmtCovarianceWorkspace()
         self.cw20 = nmt.NmtCovarianceWorkspace()
@@ -41,9 +42,9 @@ class nacov:
         
         self.num_ell = len(self.mc.bins.get_effective_ells())
         
-        self.Cl12 = power.compute_spectra(namap1, namap2, mc=mc)
-        self.Cl11 = power.compute_spectra(namap1, namap1, mc=mc)
-        self.Cl22 = power.compute_spectra(namap2, namap2, mc=mc)
+        self.Cl12 = power.compute_spectra(namap1, namap2, mc=mc_12)
+        self.Cl11 = power.compute_spectra(namap1, namap1, mc=mc_11)
+        self.Cl22 = power.compute_spectra(namap2, namap2, mc=mc_22)
         
         if signal is None:
             self.signal = {}
@@ -66,16 +67,16 @@ class nacov:
         for XY in spec_list:
             if XY not in self.signal.keys():
                 self.signal[XY] = self.smooth_and_interpolate(
-                    mc.lb, self.Cl12[XY], 
+                    lb, self.Cl12[XY], 
                     smoothing_window, smoothing_polyorder)
             if XY + '_1' not in self.noise.keys():
                 self.noise[XY + '_1'] = self.smooth_and_interpolate(
-                    mc.lb, self.Cl11[XY], 
+                    lb, self.Cl11[XY], 
                     smoothing_window, smoothing_polyorder) - self.signal[XY]
                 self.noise[XY + '_1'] = np.maximum(self.noise[XY + '_1'], 0.0)
             if XY + '_2' not in self.noise.keys():
                 self.noise[XY + '_2'] = self.smooth_and_interpolate(
-                    mc.lb, self.Cl22[XY], 
+                    lb, self.Cl22[XY], 
                     smoothing_window, smoothing_polyorder) - self.signal[XY]
                 self.noise[XY + '_2'] = np.maximum(self.noise[XY + '_2'], 0.0)
                 

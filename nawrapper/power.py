@@ -138,7 +138,7 @@ class abstract_namap():
                     "you wanted just pol maps, try maps=(None, q_map, u_map).")
 
 
-        if isinstance(self.map_I, enmap.ndmap):
+        if isinstance(self.map_I, enmap.ndmap) or isinstance(self.map_Q, enmap.ndmap):
             self.mode = 'car'
         else:
             self.mode = 'healpix'
@@ -227,7 +227,8 @@ class namap_car(abstract_namap):
 
     def __init__(self, maps, masks=None, beams=None, 
                  unpixwin=True, kx=0, ky=0, kspace_apo=40, legacy_steve=False, 
-                 verbose=True, sub_shape=None, sub_wcs=None):
+                 verbose=True, sub_shape=None, sub_wcs=None,
+                 purify_e=False, purify_b=False):
         r"""Generate a CAR map container
 
         This bundles CAR pixelization map products, in particular
@@ -281,9 +282,11 @@ class namap_car(abstract_namap):
         self.legacy_steve = legacy_steve
         # needed to reproduce steve's spectra
         if legacy_steve:
-            self.map_I.wcs.wcs.crpix += np.array([-1, -1])
-            self.map_Q.wcs.wcs.crpix += np.array([-1, -1])
-            self.map_U.wcs.wcs.crpix += np.array([-1, -1])
+            if self.has_temp:
+                self.map_I.wcs.wcs.crpix += np.array([-1, -1])
+            if self.has_pol:
+                self.map_Q.wcs.wcs.crpix += np.array([-1, -1])
+                self.map_U.wcs.wcs.crpix += np.array([-1, -1])
             if verbose: print('Applying legacy_steve correction.')
         
         self.extract_and_filter_CAR(kx, ky, kspace_apo,
@@ -294,11 +297,13 @@ class namap_car(abstract_namap):
         if self.has_temp:
             self.field_spin0 = nmt.NmtField(
                 self.mask_temp, [self.map_I],
-                beam=self.beam_temp, wcs=self.wcs, n_iter=0)
+                beam=self.beam_temp, wcs=self.wcs, n_iter=0, 
+                purify_e=purify_e, purify_b=purify_b)
         if self.has_pol:
             self.field_spin2 = nmt.NmtField(
                 self.mask_pol, [self.map_Q, self.map_U],
-                beam=self.beam_pol, wcs=self.wcs, n_iter=0)
+                beam=self.beam_pol, wcs=self.wcs, n_iter=0,
+                purify_e=purify_e, purify_b=purify_b)
 
 
     def extract_and_filter_CAR(self, kx, ky, kspace_apo, 
@@ -343,7 +348,8 @@ class namap_car(abstract_namap):
 class namap_hp(abstract_namap):
 
     def __init__(self, maps, masks=None, beams=None, unpixwin=True, 
-                 verbose=True, n_iter=3):
+                 verbose=True, n_iter=3,
+                 purify_e=False, purify_b=False):
         r"""Generate a healpix map container
 
         This bundles healpix pixelization map products, in particular
@@ -380,7 +386,11 @@ class namap_hp(abstract_namap):
             maps=maps, masks=masks, beams=beams,
             unpixwin=unpixwin, verbose=verbose)
 
-        self.nside = hp.npix2nside(len(self.map_I))
+        if self.has_temp:
+            self.nside = hp.npix2nside(len(self.map_I))
+        else:
+            self.nside = hp.npix2nside(len(self.map_Q))
+
         self.lmax_beam = 3 * self.nside
         self.set_beam(verbose=verbose)
         self.pixwin_temp, self.pixwin_pol = hp.sphtfunc.pixwin(self.nside, pol=True)
@@ -399,11 +409,13 @@ class namap_hp(abstract_namap):
         if self.has_temp:
             self.field_spin0 = nmt.NmtField(
                 self.mask_temp, [self.map_I],
-                beam=beam_temp, n_iter=n_iter)
+                beam=beam_temp, n_iter=n_iter,
+                purify_e=purify_e, purify_b=purify_b)
         if self.has_pol:
             self.field_spin2 = nmt.NmtField(
                 self.mask_pol, [self.map_Q, self.map_U],
-                beam=beam_pol, n_iter=n_iter)
+                beam=beam_pol, n_iter=n_iter,
+                purify_e=purify_e, purify_b=purify_b)
             
 
 class mode_coupling:
@@ -451,20 +463,22 @@ class mode_coupling:
             self.has_pol = namap1.has_pol and namap2.has_pol
 
             # compute whichever mode coupling matrices we have data for
-            if self.has_temp:
+            if namap1.has_temp and namap2.has_temp:
                 self.w00 = nmt.NmtWorkspace()
                 self.w00.compute_coupling_matrix(
                     namap1.field_spin0, namap2.field_spin0, bins, n_iter=0)
 
-            if self.has_temp and self.has_pol:
+            if namap1.has_temp and namap2.has_pol:
                 self.w02 = nmt.NmtWorkspace()
                 self.w02.compute_coupling_matrix(
                     namap1.field_spin0, namap2.field_spin2, bins, n_iter=0)
+            
+            if namap1.has_pol and namap2.has_temp:
                 self.w20 = nmt.NmtWorkspace()
                 self.w20.compute_coupling_matrix(
                     namap1.field_spin2, namap2.field_spin0, bins, n_iter=0)
 
-            if self.has_pol:
+            if namap1.has_pol and namap2.has_pol:
                 self.w22 = nmt.NmtWorkspace()
                 self.w22.compute_coupling_matrix(
                     namap1.field_spin2, namap2.field_spin2, bins, n_iter=0)
@@ -690,3 +704,33 @@ def mkdir_p(path):
             pass
         else:
             raise
+
+
+
+def util_bin_FFTspec_CAR(data,modlmap,bin_edges):
+    digitized = np.digitize(np.ndarray.flatten(modlmap), bin_edges,right=True)
+    return np.bincount(digitized,(data).reshape(-1))[1:-1]/np.bincount(digitized)[1:-1]
+
+def util_bin_FFT_CAR(map1, map2, mask, beam1, beam2, lmax=8000):
+    """Compute the FFTs, multiply, bin
+    
+    Beams are multiplied at bin centers. This is the worst
+    job you could do for calculating power spectra.
+    """
+    beam_ells = np.arange(lmax+1)
+
+    kmap1 = enmap.fft(map1*mask, normalize="phys")
+    kmap2 = enmap.fft(map2*mask, normalize="phys")
+    power = (kmap1*np.conj(kmap2)).real
+    
+    bin_edges = np.arange(0,lmax,40)
+    centers = (bin_edges[1:] + bin_edges[:-1])/2.
+    w2 = np.mean(mask**2.)
+    modlmap = enmap.modlmap(map1.shape,map1.wcs)
+    binned_power = util_bin_FFTspec_CAR(power/w2,modlmap,bin_edges)
+    binned_power *= beam1[centers.astype(int)]
+    binned_power *= beam2[centers.astype(int)]
+    return centers, binned_power
+
+
+

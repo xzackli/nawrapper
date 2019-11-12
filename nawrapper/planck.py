@@ -1,6 +1,6 @@
 """Utility functions for processing Planck maps into spectra."""
 from __future__ import print_function
-from astropy.io import fits
+from astropy.io import fits, ascii
 import healpy as hp
 import numpy as np
 import nawrapper as nw
@@ -155,3 +155,20 @@ class PlanckCov:
         
         if debug:
             return ells, cl, err, subcov
+
+
+
+def get_planck_total_spectrum(theory_file, foreground_file, lmax):
+    # read planck theory and foregrounds
+    th = ascii.read(theory_file)
+    fg = ascii.read(foreground_file)
+    fg['BB143X143'] = fg['EE143X143'] * 0.0
+    ell_fac = fg['l'][:lmax-1] * (fg['l'][:lmax-1]+1) / (2 * np.pi)
+    def ap(x): return np.hstack( ((0.0,0.0), x) )
+    signal_dict = {}
+    for XY in ['TT', 'TE', 'EE', 'BB']:
+        signal_dict[XY] =  ap((
+            th[XY][:lmax-1]  + fg[XY + '143X143'][:lmax-1]
+                              )/ell_fac)
+    signal_dict['EB'] = signal_dict['EE'] * 0.0
+    return signal_dict

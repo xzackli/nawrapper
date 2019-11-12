@@ -189,3 +189,25 @@ def sub_mono_di(map_in, mask_in, nside,
             m.flat[ipix] -= dipole[2] * z
         m.flat[ipix] -= mono
     return m
+
+
+def get_cmb_sim_hp(signal, nside_out):
+    """Generate a healpix realization of the spectra.
+    
+    Parameters
+    ----------
+    signal : dictionary
+        dictionary containing spectra starting from ell=0 with keys 
+        TT, EE, BB, TE, EB, TE.
+    nside_out : int
+        output map resolution
+    """
+    cmb_sim = hp.synfast(
+        cls=(
+            signal['TT'], signal['EE'], signal['BB'], 
+            signal['TE'], signal['EB'], signal['TE']*0.0
+            ),
+        nside=nside_out,
+        pixwin=True, verbose=False, new=True
+    )
+    return cmb_sim
