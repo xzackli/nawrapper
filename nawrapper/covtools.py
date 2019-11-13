@@ -32,6 +32,7 @@ class nacov:
         self.lmax = mc_12.bins.lmax
         self.mc = mc_12
         lb = mc_12.lb
+        self.lb = lb
         self.namap1 = namap1
         self.namap2 = namap2
 
@@ -85,6 +86,10 @@ class nacov:
             print("setting EB = 0")
             self.signal['EB'] = 0.0 * self.signal['EE']
             self.noise['EB'] = 0.0 * self.noise['EE_1']
+        if 'BB' in self.signal and 'TB' not in self.signal:
+            print("setting TB = 0")
+            self.signal['TB'] = 0.0 * self.signal['BB']
+            self.noise['TB'] = 0.0 * self.noise['BB_1']
         
     def compute(self):
         # This is the time-consuming operation. You need to redo this for
@@ -100,15 +105,15 @@ class nacov:
                 namap1.field_spin0, namap2.field_spin0, 
                 lmax=self.lmax)
 
-            beam_spin00_map1 = namap1.beam_temp[:self.lmax+1] * namap1.pixwin_temp[:self.lmax+1]
-            beam_spin00_map2 = namap2.beam_temp[:self.lmax+1] * namap2.pixwin_temp[:self.lmax+1]
+            beam_spin0_map1 = namap1.beam_temp[:self.lmax+1] * namap1.pixwin_temp[:self.lmax+1]
+            beam_spin0_map2 = namap2.beam_temp[:self.lmax+1] * namap2.pixwin_temp[:self.lmax+1]
             covar_00_00 = nmt.gaussian_covariance(
                 self.cw00,
                 0, 0, 0, 0,  # Spins of the 4 fields
-                [(self.signal['TT'] + self.noise['TT_1']) * beam_spin00_map1 * beam_spin00_map1],  # TT
-                [self.signal['TT'] * beam_spin00_map1 * beam_spin00_map2],  # TT
-                [self.signal['TT'] * beam_spin00_map2 * beam_spin00_map1],  # TT
-                [(self.signal['TT'] + self.noise['TT_2']) * beam_spin00_map2 * beam_spin00_map2],  # TT
+                [(self.signal['TT'] + self.noise['TT_1']) * beam_spin0_map1 * beam_spin0_map1],  # TT
+                [self.signal['TT'] * beam_spin0_map1 * beam_spin0_map2],  # TT
+                [self.signal['TT'] * beam_spin0_map2 * beam_spin0_map1],  # TT
+                [(self.signal['TT'] + self.noise['TT_2']) * beam_spin0_map2 * beam_spin0_map2],  # TT
                 mc.w00, wb=mc.w00).reshape([self.num_ell, 1,
                                             self.num_ell, 1])
             self.covmat['TTTT'] = covar_00_00[:, 0, :, 0]
@@ -120,32 +125,31 @@ class nacov:
                 namap1.field_spin2, namap2.field_spin2, 
                 lmax=self.lmax)
 
-            beam_spin22_map1 = namap1.beam_pol[:self.lmax+1] * namap1.pixwin_pol[:self.lmax+1]
-            beam_spin22_map2 = namap2.beam_pol[:self.lmax+1] * namap2.pixwin_pol[:self.lmax+1]
+            beam_spin2_map1 = namap1.beam_pol[:self.lmax+1] * namap1.pixwin_pol[:self.lmax+1]
+            beam_spin2_map2 = namap2.beam_pol[:self.lmax+1] * namap2.pixwin_pol[:self.lmax+1]
             covar_22_22 = nmt.gaussian_covariance(
                 self.cw22, 2, 2, 2, 2,  # Spins of the 4 fields
-                [(self.signal['EE']+self.noise['EE_1']) * beam_spin22_map1 * beam_spin22_map1, 
-                 (self.signal['EB']) * beam_spin22_map1 * beam_spin22_map1,
-                 (self.signal['EB']) * beam_spin22_map1 * beam_spin22_map1, 
-                 (self.signal['BB']+self.noise['BB_1']) * beam_spin22_map1 * beam_spin22_map1],  # EE, EB, BE, BB
+                [(self.signal['EE']+self.noise['EE_1']) * beam_spin2_map1 * beam_spin2_map1, 
+                 (self.signal['EB']) * beam_spin2_map1 * beam_spin2_map1,
+                 (self.signal['EB']) * beam_spin2_map1 * beam_spin2_map1, 
+                 (self.signal['BB']+self.noise['BB_1']) * beam_spin2_map1 * beam_spin2_map1],  # EE, EB, BE, BB
                 
-                [(self.signal['EE']) * beam_spin22_map1 * beam_spin22_map2, 
-                 (self.signal['EB']) * beam_spin22_map1 * beam_spin22_map2,
-                 (self.signal['EB']) * beam_spin22_map1 * beam_spin22_map2, 
-                 (self.signal['EB']) * beam_spin22_map1 * beam_spin22_map2],  # EE, EB, BE, BB
+                [(self.signal['EE']) * beam_spin2_map1 * beam_spin2_map2, 
+                 (self.signal['EB']) * beam_spin2_map1 * beam_spin2_map2,
+                 (self.signal['EB']) * beam_spin2_map1 * beam_spin2_map2, 
+                 (self.signal['EB']) * beam_spin2_map1 * beam_spin2_map2],  # EE, EB, BE, BB
                 
-                [(self.signal['EE']) * beam_spin22_map2 * beam_spin22_map1, 
-                 (self.signal['EB']) * beam_spin22_map2 * beam_spin22_map1,
-                 (self.signal['EB']) * beam_spin22_map2 * beam_spin22_map1, 
-                 (self.signal['EB']) * beam_spin22_map2 * beam_spin22_map1],  # EE, EB, BE, BB
+                [(self.signal['EE']) * beam_spin2_map2 * beam_spin2_map1, 
+                 (self.signal['EB']) * beam_spin2_map2 * beam_spin2_map1,
+                 (self.signal['EB']) * beam_spin2_map2 * beam_spin2_map1, 
+                 (self.signal['EB']) * beam_spin2_map2 * beam_spin2_map1],  # EE, EB, BE, BB
                 
-                [(self.signal['EE']+self.noise['EE_1']) * beam_spin22_map2 * beam_spin22_map2, 
-                 (self.signal['EB'])                    * beam_spin22_map2 * beam_spin22_map2,
-                 (self.signal['EB'])                    * beam_spin22_map2 * beam_spin22_map2, 
-                 (self.signal['BB']+self.noise['BB_2']) * beam_spin22_map2 * beam_spin22_map2],  # EE, EB, BE, BB
+                [(self.signal['EE']+self.noise['EE_1']) * beam_spin2_map2 * beam_spin2_map2, 
+                 (self.signal['EB'])                    * beam_spin2_map2 * beam_spin2_map2,
+                 (self.signal['EB'])                    * beam_spin2_map2 * beam_spin2_map2, 
+                 (self.signal['BB']+self.noise['BB_2']) * beam_spin2_map2 * beam_spin2_map2],  # EE, EB, BE, BB
                 
-                mc.w22, wb=mc.w22).reshape([self.num_ell, 4,
-                                      self.num_ell, 4])
+                mc.w22, wb=mc.w22).reshape([self.num_ell, 4, self.num_ell, 4])
 
             self.covmat['EEEE'] = covar_22_22[:, 0, :, 0]
             self.covmat['EEEB'] = covar_22_22[:, 0, :, 1]
@@ -164,26 +168,31 @@ class nacov:
             self.covmat['BBBE'] = covar_22_22[:, 3, :, 2]
             self.covmat['BBBB'] = covar_22_22[:, 3, :, 3]
             
+
                 
 #         ## TETE
-#         beam_02 = (namap1.beam_temp[:self.lmax+1] * namap2.beam_pol[:self.lmax+1] *
-#                        namap1.pixwin_temp[:self.lmax+1] * namap2.pixwin_pol[:self.lmax+1])
-#         beam_20 = (namap1.beam_temp[:self.lmax+1] * namap2.beam_pol[:self.lmax+1] *
-#                        namap1.pixwin_temp[:self.lmax+1] * namap2.pixwin_pol[:self.lmax+1])
         
-#         if namap1.has_temp and namap2.has_pol:
-#             covar_02_02 = nmt.gaussian_covariance(cw, 0, 2, 0, 2,  # Spins of the 4 fields
-#                                           [cl_tt],  # TT
-#                                           [cl_te, cl_tb],  # TE, TB
-#                                           [cl_te, cl_tb],  # ET, BT
-#                                           [cl_ee, cl_eb,
-#                                            cl_eb, cl_bb],  # EE, EB, BE, BB
-#                                           w02, wb=w02).reshape([n_ell, 2,
-#                                                                 n_ell, 2])
-#             self.covmat['TETE'] = covar_02_02[:, 0, :, 0]
-#             self.covmat['TETB'] = covar_02_02[:, 0, :, 1]
-#             self.covmat['TBTE'] = covar_02_02[:, 1, :, 0]
-#             self.covmat['TBTB'] = covar_02_02[:, 1, :, 1]
+        if namap1.has_temp and namap2.has_pol:
+            self.cw02.compute_coupling_coefficients(
+                namap1.field_spin0, namap2.field_spin2, 
+                namap1.field_spin0, namap2.field_spin2, 
+                lmax=self.lmax)
+            covar_02_02 = nmt.gaussian_covariance(self.cw02, 0, 2, 0, 2,  # Spins of the 4 fields
+                                          [(self.signal['TT'] + self.noise['TT_1']) * beam_spin0_map1 * beam_spin0_map1],  # TT
+                                          [self.signal['TE'] * beam_spin0_map1 * beam_spin0_map2, 
+                                           self.signal['TB'] * beam_spin0_map1 * beam_spin0_map2],  # TE, TB
+                                          [self.signal['TE'] * beam_spin0_map2 * beam_spin0_map1, 
+                                           self.signal['TB'] * beam_spin0_map2 * beam_spin0_map1],  # ET, BT
+                                          [(self.signal['EE']+self.noise['EE_1']) * beam_spin2_map2 * beam_spin2_map2, 
+                                           self.signal['EB'] * beam_spin2_map2 * beam_spin2_map2,
+                                           self.signal['EB'] * beam_spin2_map2 * beam_spin2_map2, 
+                                           self.signal['BB'] * beam_spin2_map2 * beam_spin2_map2],  # EE, EB, BE, BB
+                                          mc.w02, wb=mc.w02).reshape([self.num_ell, 2,
+                                                                self.num_ell, 2])
+            self.covmat['TETE'] = covar_02_02[:, 0, :, 0]
+            self.covmat['TETB'] = covar_02_02[:, 0, :, 1]
+            self.covmat['TBTE'] = covar_02_02[:, 1, :, 0]
+            self.covmat['TBTB'] = covar_02_02[:, 1, :, 1]
 
 #         # off diagonals
 #         if (namap1.has_temp and namap1.has_pol) and (namap2.has_temp and namap2.has_pol):
