@@ -1,6 +1,7 @@
 """Power spectrum objects and utilities."""
 from __future__ import print_function
 import pymaster as nmt
+from pymaster import nmtlib as lib
 import healpy as hp
 import numpy as np
 from pixell import enmap
@@ -428,7 +429,8 @@ class mode_coupling:
     data.
     """
 
-    def __init__(self, namap1=None, namap2=None, bins=None, mcm_dir=None):
+    def __init__(self, namap1=None, namap2=None, bins=None, mcm_dir=None, 
+        overwrite=False, verbose=True):
         r"""
         Create a `mode_coupling` object.
 
@@ -444,13 +446,17 @@ class mode_coupling:
             Specify a directory which contains the workspace files for this 
             mode-coupling object.
         """
+
         if bins is None and mcm_dir is None:
             raise ValueError("Must specify binning, unless loading from disk.")
-        
 
-        if mcm_dir is not None:
+        self.mcm_dir = mcm_dir
+
+        if (mcm_dir is not None) and (not overwrite) and os.path.isfile(os.path.join(self.mcm_dir, 'mcm.json')):
+            if verbose: print("Loading mode-coupling matrices from disk.")
             self.load_from_dir(mcm_dir)
         else:
+            if verbose: print("Computing new mode-coupling matrices.")
             self.bins = bins
             self.lb = bins.get_effective_ells()
             
@@ -459,10 +465,8 @@ class mode_coupling:
                     'pixel types m1:%s, m2:%s incompatible' % 
                     (namap1.mode, namap2.mode))
 
-            self.has_temp = namap1.has_temp and namap2.has_temp
-            self.has_pol = namap1.has_pol and namap2.has_pol
-
             self.workspace_dict = {}
+            self.w00, self.w02, self.w20, self.w22 = None, None, None, None
 
             # compute whichever mode coupling matrices we have data for
             if namap1.has_temp and namap2.has_temp:
@@ -489,6 +493,9 @@ class mode_coupling:
                     namap1.field_spin2, namap2.field_spin2, bins, n_iter=0)
                 self.workspace_dict[(2,2)] = self.w22
 
+            if self.mcm_dir is not None:
+                self.write_to_dir(self.mcm_dir)
+                if verbose: print("Saving mode-coupling matrices to " + self.mcm_dir)
 
 
     def load_from_dir(self, mcm_dir):
@@ -499,25 +506,30 @@ class mode_coupling:
             # convert lists into numpy arrays
             for bk in ['ells', 'bpws', 'weights']:
                 data['bin_kwargs'][bk] = np.array( data['bin_kwargs'][bk])
-            self.bins =  nmt.NmtBin(**data['bin_kwargs'])
+            self.bins =  nabin(**data['bin_kwargs'])
             self.lb = self.bins.get_effective_ells()
 
-            self.has_temp = data['has_temp']
-            self.has_pol = data['has_pol']
+            self.workspace_dict = {}
 
-            if self.has_temp:
+            if 'w00' in data:
                 self.w00 = nmt.NmtWorkspace()
                 self.w00.read_from(os.path.join(mcm_dir, data['w00']))
+                self.workspace_dict[(0,0)] = self.w00
 
-            if self.has_temp and self.has_pol:
+            if 'w02' in data:
                 self.w02 = nmt.NmtWorkspace()
                 self.w02.read_from(os.path.join(mcm_dir, data['w02']))
+                self.workspace_dict[(0,2)] = self.w02
+
+            if 'w20' in data:
                 self.w20 = nmt.NmtWorkspace()
                 self.w20.read_from(os.path.join(mcm_dir, data['w20']))
+                self.workspace_dict[(2,0)] = self.w20
 
-            if self.has_pol:
+            if 'w22' in data:
                 self.w22 = nmt.NmtWorkspace()
                 self.w22.read_from(os.path.join(mcm_dir, data['w22']))
+                self.workspace_dict[(2,2)] = self.w22
              
 
     def write_to_dir(self, mcm_dir):
@@ -534,25 +546,27 @@ class mode_coupling:
             weights[self.bins.get_ell_list(i)] = self.bins.get_weight_list(i)
 
         # basic json
-        data = {'has_temp': self.has_temp, 'has_pol': self.has_pol}
+        data = {}
 
         # write binaries
-        if self.has_temp:
+        if self.w00 is not None:
             data.update({'w00': 'w00.bin'})
-            self.w00.write_to(mcm_dir+'/w00.bin')
+            self.w00.write_to(os.path.join(mcm_dir, data['w00']))
 
-        if self.has_temp and self.has_pol:
-            data.update({'w02': 'w02.bin', 'w20': 'w20.bin'})
+        if self.w02 is not None:
+            data.update({'w02': 'w02.bin'})
             self.w02.write_to(os.path.join(mcm_dir, data['w02']))
+
+        if self.w20 is not None:
+            data.update({'w20': 'w20.bin'})
             self.w20.write_to(os.path.join(mcm_dir, data['w20']))
 
-        if self.has_pol:
+        if self.w22 is not None:
             data.update({'w22': 'w22.bin'})
             self.w22.write_to(os.path.join(mcm_dir, data['w22']))
 
         # write bin kwargs
         data['bin_kwargs'] = {
-            'nside' : 2048,
             'lmax' : lmax,
             'ells' : np.arange(lmax+1).tolist(),
             'bpws' : bpws.tolist(),
@@ -586,6 +600,78 @@ class mode_coupling:
         cl_coupled = nmt.compute_coupled_cell(f_a, f_b)
         cl_decoupled = wsp.decouple_cell(cl_coupled)
         return cl_decoupled
+
+
+def read_beam(beam_file):
+    r"""Read a beam file from disk.
+
+    This function will interpolate a beam file with columns
+    :math:`\ell, B_{\ell}` to a 1D array where index corresponds to
+    :math:`\ell`.
+
+    Parameters
+    ----------
+    beam_file : str
+        The filename of the beam
+
+    multiply_healpix_window : bool
+
+    Returns
+    -------
+    numpy array (float)
+        Contains the beam :math:`B_{\ell}` where index `i` corresponds to
+        multipole `i` (i.e. this array starts at ell = 0).
+
+    """
+    beam_t = np.loadtxt(beam_file)
+    max_beam_l = np.max(beam_t[:, 0].astype(int))
+    beam_data = np.zeros(max_beam_l)
+    beam_data = np.interp(np.arange(max_beam_l),
+                          fp=beam_t[:, 1].astype(float), xp=beam_t[:, 0])
+    return beam_data
+
+
+class nabin(nmt.NmtBin):
+
+    def __init__(self, lmax, bpws=None, ells=None, weights=None,
+                 nlb=None, is_Dell=False, f_ell=None):
+
+        # remember a dictionary so we can turn this into a JSON later
+        self.init_dict = {
+            'lmax' : lmax,
+            'bpws' : bpws,
+            'ells' : ells,
+            'weights' : weights,
+            'nlb' : nlb,
+            'is_Dell' : is_Dell,
+            'f_ell' : f_ell
+        }
+        # can't json a numpy array
+        for array_key in ('bpws', 'ells', 'weights', 'f_ell'):
+            if isinstance(self.init_dict[array_key], np.ndarray):
+                self.init_dict[array_key] = self.init_dict[array_key].tolist()
+
+
+        if (bpws is None) and (ells is None) and (weights is None) \
+           and (nlb is None):
+            raise KeyError("Must supply bandpower arrays or constant "
+                           "bandpower width")
+
+        if nlb is None:
+            if (bpws is None) or (ells is None) or (weights is None):
+                raise KeyError("Must provide bpws, ells and weights")
+            if f_ell is None:
+                if is_Dell:
+                    f_ell = ells * (ells + 1.) / (2 * np.pi)
+                else:
+                    f_ell = np.ones(len(ells))
+            self.bin = lib.bins_create_py(bpws.astype(np.int32),
+                                          ells.astype(np.int32),
+                                          weights, f_ell, int(lmax))
+        else:
+            self.bin = lib.bins_constant(nlb, lmax, int(is_Dell))
+        self.lmax = lmax
+        self.lb = self.get_effective_ells()
 
 
 def read_bins(file, lmax=7925, is_Dell=False):
@@ -622,66 +708,40 @@ def read_bins(file, lmax=7925, is_Dell=False):
         bpws[bl:br+1] = i
 
     weights = np.array([1.0 / np.sum(bpws == bpws[l]) for l in range(lmax)])
-    b = nmt.NmtBin(2048, bpws=bpws, ells=ells, weights=weights,
-                   lmax=lmax, is_Dell=is_Dell)
+    b = nabin(lmax=lmax, bpws=bpws, ells=ells, weights=weights,
+              is_Dell=is_Dell)
     return b
 
 
-def get_unbinned_bins(lmax, nside=None, lmin=2):
-    """Generate an unbinned NaMaster binning.
+def create_binning(lmax, lmin=2, widths=1, weight_function=None):
+    """Create a nabin object conveniently."""
 
-    Parameters
-    ----------
-    lmax : int
-        maximum multipole to include bins
-    nside : int
-        The NmtBin actually chooses the maximum multipole as the
-        minimum of `lmax`, `3*nside-1`.
+    # if widths is an integer, create a constant 
+    ells = np.arange(lmax+1).astype(int)
+    bpws = -np.ones_like(ells).astype(int)  # Array of bandpower indices
 
-    Returns
-    -------
-    b : NmtBin
-        contains a bin for every ell up to lmax
+    if not hasattr(widths, '__len__'):
+        # we have an array of lengths!
+        widths_list = [widths for i in 
+            range(np.ceil((lmax-lmin)/widths).astype(int)+1)]
+        widths = widths_list
 
-    """
-    bpws_ell = np.arange(lmax+1)
-    bpws = bpws_ell - lmin  # array of bandpower indices
-    bpws[bpws < 0] = -1  # set ell=0,1 to -1 : i.e. not included
-    weights = np.ones_like(bpws)
-    if nside is None:
-        nside = lmax
-    b = nmt.NmtBin(nside, bpws=bpws, ells=bpws_ell, weights=weights, lmax=lmax)
+    bin_left = lmin
+    bin_num = 0
+    for bin_num, w in enumerate(widths):
+        bpws[bin_left:bin_left+w] = bin_num
+        bin_left += w
+
+    if weight_function is None:
+        weights = weights = np.ones_like(ells)
+    else:
+        weights = [weight_function(l) for l in ells]
+    
+    b = nabin(
+        lmax=lmax, bpws=bpws, ells=ells, 
+        weights=weights, is_Dell=False)
     return b
-
-
-def read_beam(beam_file):
-    r"""Read a beam file from disk.
-
-    This function will interpolate a beam file with columns
-    :math:`\ell, B_{\ell}` to a 1D array where index corresponds to
-    :math:`\ell`.
-
-    Parameters
-    ----------
-    beam_file : str
-        The filename of the beam
-
-    multiply_healpix_window : bool
-
-    Returns
-    -------
-    numpy array (float)
-        Contains the beam :math:`B_{\ell}` where index `i` corresponds to
-        multipole `i` (i.e. this array starts at ell = 0).
-
-    """
-    beam_t = np.loadtxt(beam_file)
-    max_beam_l = np.max(beam_t[:, 0].astype(int))
-    beam_data = np.zeros(max_beam_l)
-    beam_data = np.interp(np.arange(max_beam_l),
-                          fp=beam_t[:, 1].astype(float), xp=beam_t[:, 0])
-    return beam_data
-
+    
 
 def bin_spec_dict(Cb, binleft, binright, lmax):
     """Bin an unbinned spectra dictionary with a specified l^2 binning."""
