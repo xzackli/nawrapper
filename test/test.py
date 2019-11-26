@@ -37,7 +37,7 @@ def test_cov_TT():
     m1, m2 = get_maps()
 
     print('Computing mode coupling matrix.')
-    mc = nw.mode_coupling(m1, m2, bins=nw.get_unbinned_bins(lmax-1, nside=nside))
+    mc = nw.mode_coupling(m1, m2, bins=nw.nabin(lmax))
     cov = nw.nacov(m1, m2, mc_11=mc, mc_12=mc, mc_22=mc)
     cov.compute()
     

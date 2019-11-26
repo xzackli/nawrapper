@@ -51,7 +51,7 @@ def compute_spectra(namap1, namap2,
     if (lmax is not None) and (bins is None) and (mc is None):
         if verbose: 
             print("Assuming unbinned and computing the mode coupling matrix.")
-        bins = get_unbinned_bins(lmax) # will choose lmax, nside ignored
+        bins = nw.create_binning(lmax)
 
     if mc is None:
         mc = mode_coupling(namap1, namap2, bins)
