@@ -46,8 +46,10 @@ def load_planck_half_missions(map_dir, mask_dir, beam_dir, par=None,
             beam_Wl_hdu = fits.open(os.path.join(beam_dir, ('Wl_R3.01_plikmask_' + 
                 freq1+'hm'+split1+'x'+freq2+'hm'+split2+'.fits')))
     
-    beam_TT = np.sqrt(beam_Wl_hdu[1].data['TT_2_TT'][0])
-    beam_EE = np.sqrt(beam_Wl_hdu[2].data['EE_2_EE'][0])
+    beam_TT = np.sqrt(np.maximum(1e-13,
+        beam_Wl_hdu[1].data['TT_2_TT'][0]))
+    beam_EE = np.sqrt(np.maximum(1e-13,
+        beam_Wl_hdu[2].data['EE_2_EE'][0]))
     
     mfile_1 = os.path.join(map_dir, ('HFI_SkyMap_'+freq1+
             '_2048_R3.01_halfmission-'+split1+'.fits'))
@@ -77,20 +79,6 @@ def load_planck_half_missions(map_dir, mask_dir, beam_dir, par=None,
     beams = (beam_TT, beam_EE)
     
     return maps_1, masks_1, maps_2, masks_2, beams
-    
-#     preprocess_maps(maps_1, masks_1, (maps_1[0] < -1e30)
-#                     par['pol_efficiency'][freq1], nside)
-#     preprocess_maps(maps_2, masks_2, (maps_1[0] < -1e30)
-#                     par['pol_efficiency'][freq2], nside)
-    
-#     m1 = nw.namap_hp(
-#         maps=maps_1, masks=masks_1, 
-#         beams=(beam_TT, beam_EE), unpixwin=True)
-#     m2 = nw.namap_hp(
-#         maps=maps_2, masks=masks_2, 
-#         beams=(beam_TT, beam_EE), unpixwin=True)
-
-#     return m1, m2
 
 
 def preprocess_maps(maps, masks, missing_pixel, pol_eff, nside):
@@ -114,15 +102,57 @@ def preprocess_maps(maps, masks, missing_pixel, pol_eff, nside):
     return maps, masks
 
 
+def get_half_mission_namap(freq1, freq2, map_dir, mask_dir, beam_dir):
+    
+    # maps and masks with _raw are those which have not been proprocessed
+    maps_1_raw, masks_1_raw, maps_2_raw, masks_2_raw, beams = \
+        load_planck_half_missions(
+            map_dir=map_dir, mask_dir=mask_dir, beam_dir=beam_dir, 
+            freq1=freq1, freq2=freq2)
 
+    pol_eff_1 = param_2018['pol_efficiency'][freq1]
+    pol_eff_2 = param_2018['pol_efficiency'][freq2]
+
+    maps_1, masks_1 = preprocess_maps(
+        maps_1_raw, masks_1_raw, (maps_1_raw[0] < -1e30), pol_eff_1, 2048)
+    maps_2, masks_2 = preprocess_maps(
+        maps_2_raw, masks_2_raw, (maps_2_raw[0] < -1e30), pol_eff_2, 2048)
+
+    m1 = nw.namap_hp(maps=maps_1, masks=masks_1, beams=beams, unpixwin=True)
+    m2 = nw.namap_hp(maps=maps_2, masks=masks_2, beams=beams, unpixwin=True)
+    return m1, m2
+    
 class PlanckCov:
     def __init__(self, ellspath, covpath='covmat.dat', 
                  clpath='data_extracted.dat'):
         self.cov = np.linalg.inv(np.genfromtxt(covpath))
         self.ells = np.genfromtxt(ellspath, usecols=0, unpack=True)
         self.cls = np.genfromtxt(clpath, usecols=1, unpack=True)
+        
+        self.keys = [
+            'TT_100x100', 'TT_143x143', 'TT_143x217', 'TT_217x217',
+            'EE_100x100', 'EE_100x143', 'EE_100x217', 
+            'EE_143x143', 'EE_143x217', 'EE_217x217',
+            'TE_100x100', 'TE_100x143', 'TE_100x217', 
+            'TE_143x143', 'TE_143x217', 'TE_217x217']
+        
+        subarray_indices = np.arange(
+            self.cov.shape[0]-1)[(np.diff(self.ells) < 0)] + 1
+        self.sub_indices = np.hstack( ( [0], subarray_indices, len(self.cls) ) )
+        key_ind = list(range(len(self.keys)))
+        self.key_index_dict = dict(zip(self.keys,key_ind))
+        
+    def get_spec(self, spec):
+        i = self.key_index_dict[spec]
+        
+        subcov = self.get_subcov(spec, verbose=False)
+        ells = self.ells[self.sub_indices[i]:self.sub_indices[i+1]]
+        cl = self.cls[self.sub_indices[i]:self.sub_indices[i+1]]
+        err = np.sqrt(np.diag(subcov))
+        
+        return ells, cl, err, subcov
                  
-    def get_subcov(self, spec, debug=True):
+    def get_subcov(self, spec1, spec2=None, verbose=True):
         """
         spec: {TT, TE, or EE},  {'100x100', '143x143', '143x217', '217x217'}
         cross: string, i.e.
@@ -130,31 +160,21 @@ class PlanckCov:
         returns tuple: 
             ells, cl, subcovariance matrix 
         """
-        subarray_indices = np.arange(
-            self.cov.shape[0]-1)[(np.diff(self.ells) < 0)] + 1
+
+        i = self.key_index_dict[spec1]
+        if spec2 is None:
+            j = i
+        else:
+            j = self.key_index_dict[spec2]
         
-        subarray_indices = np.hstack( ( [0], subarray_indices, len(self.cls) ) )
+        if verbose:
+            print(spec1, self.sub_indices[i], self.sub_indices[i+1])
+            print(spec2, self.sub_indices[j], self.sub_indices[j+1])
         
-        keys = ['TT_100x100', 'TT_143x143', 'TT_143x217', 'TT_217x217',
-                'EE_100x100', 'EE_100x143', 'EE_100x217', 
-                    'EE_143x143', 'EE_143x217', 'EE_217x217',
-                'TE_100x100', 'TE_100x143', 'TE_100x217', 
-                    'TE_143x143', 'TE_143x217', 'TE_217x217']
-        key_i = list(range(len(keys)))
-        key_index_dict = dict(zip(keys,key_i))
-        i = key_index_dict[spec]
-        print(spec, subarray_indices[i], subarray_indices[i+1])
-        subcov = self.cov[subarray_indices[i]:subarray_indices[i+1], 
-                              subarray_indices[i]:subarray_indices[i+1]]
-        if not debug:
-            return subcov
+        subcov = self.cov[self.sub_indices[i]:self.sub_indices[i+1], 
+                          self.sub_indices[j]:self.sub_indices[j+1]]
+        return subcov
         
-        ells = self.ells[subarray_indices[i]:subarray_indices[i+1]]
-        cl = self.cls[subarray_indices[i]:subarray_indices[i+1]]
-        err = np.sqrt(np.diag(subcov))
-        
-        if debug:
-            return ells, cl, err, subcov
 
 
 

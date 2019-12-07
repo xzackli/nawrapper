@@ -11,76 +11,6 @@ import os
 import abc, six, errno
 
 
-def compute_spectra(namap1, namap2, 
-                    bins=None, mc=None, lmax=None, verbose=True):
-    r"""Compute all of the spectra between two maps.
-
-    This computes all cross spectra between two :py:class:`nawrapper.power.abstract_namap`
-    for which there is information. For example, TE spectra will be computed
-    only if the first map has a temperature map, and the second has a
-    polarization map.
-
-    Parameters
-    ----------
-    namap1 : :py:class:`nawrapper.power.namap_hp` or :py:class:`nawrapper.ps.namap_car`.
-        The first map to compute correlations with.
-    namap2 : :py:class:`nawrapper.power.namap_hp` or :py:class:`nawrapper.ps.namap_car`.
-        To be correlated with `namap1`.
-    bins : NaMaster NmtBin object (optional)
-        At least one of `bins` or `mc` must be specified. If you specify
-        `bins` (possibly from the output of :py:func:`nawrapper.power.read_bins`)
-        then a new mode coupling matrix will be computed within this function
-        call. If you have already computed a relevant mode-coupling matrix,
-        then pass `mc` instead.
-    mc : :py:class:`nawrapper.power.mode_coupling` object (optional)
-        This object contains precomputed mode-coupling matrices.
-
-    Returns
-    -------
-    Cb : dictionary
-        Binned spectra, with the relevant cross spectra (i.e. 'TT', 'TE', 'EE')
-        as dictionary keys. This also contains the bin centers as key 'ell'.
-
-    """
-    
-    if (bins is None) and (mc is None) and (lmax is None):
-        raise ValueError(
-            "You must specify either a binning, lmax, "
-            "or a mode coupling object.")
-        
-    if (lmax is not None) and (bins is None) and (mc is None):
-        if verbose: 
-            print("Assuming unbinned and computing the mode coupling matrix.")
-        bins = nw.create_binning(lmax)
-
-    if mc is None:
-        mc = mode_coupling(namap1, namap2, bins)
-
-    # compute the TEB spectra as appropriate
-    Cb = {}
-    if namap1.has_temp and namap2.has_temp:
-        Cb['TT'] = mc.compute_master(
-            namap1.field_spin0, namap2.field_spin0, mc.w00)[0]
-    if namap1.has_temp and namap2.has_pol:
-        spin1 = mc.compute_master(
-            namap1.field_spin0, namap2.field_spin2, mc.w02)
-        Cb['TE'] = spin1[0]
-        Cb['TB'] = spin1[1]
-    if namap1.has_pol and namap2.has_temp:
-        spin1 = mc.compute_master(
-            namap1.field_spin2, namap2.field_spin0, mc.w20)
-        Cb['ET'] = spin1[0]
-        Cb['BT'] = spin1[1]
-    if namap1.has_pol and namap2.has_pol:
-        spin2 = mc.compute_master(
-            namap1.field_spin2, namap2.field_spin2, mc.w22)
-        Cb['EE'] = spin2[0]
-        Cb['EB'] = spin2[1]
-        Cb['BE'] = spin2[2]
-        Cb['BB'] = spin2[3]
-
-    Cb['ell'] = mc.lb
-    return Cb
 
 # need this decorator to make this class abstract
 @six.add_metaclass(abc.ABCMeta)
@@ -774,6 +704,77 @@ def mkdir_p(path):
             raise
 
 
+def compute_spectra(namap1, namap2, 
+                    bins=None, mc=None, lmax=None, verbose=True):
+    r"""Compute all of the spectra between two maps.
+
+    This computes all cross spectra between two :py:class:`nawrapper.power.abstract_namap`
+    for which there is information. For example, TE spectra will be computed
+    only if the first map has a temperature map, and the second has a
+    polarization map.
+
+    Parameters
+    ----------
+    namap1 : :py:class:`nawrapper.power.namap_hp` or :py:class:`nawrapper.ps.namap_car`.
+        The first map to compute correlations with.
+    namap2 : :py:class:`nawrapper.power.namap_hp` or :py:class:`nawrapper.ps.namap_car`.
+        To be correlated with `namap1`.
+    bins : NaMaster NmtBin object (optional)
+        At least one of `bins` or `mc` must be specified. If you specify
+        `bins` (possibly from the output of :py:func:`nawrapper.power.read_bins`)
+        then a new mode coupling matrix will be computed within this function
+        call. If you have already computed a relevant mode-coupling matrix,
+        then pass `mc` instead.
+    mc : :py:class:`nawrapper.power.mode_coupling` object (optional)
+        This object contains precomputed mode-coupling matrices.
+
+    Returns
+    -------
+    Cb : dictionary
+        Binned spectra, with the relevant cross spectra (i.e. 'TT', 'TE', 'EE')
+        as dictionary keys. This also contains the bin centers as key 'ell'.
+
+    """
+    
+    if (bins is None) and (mc is None) and (lmax is None):
+        raise ValueError(
+            "You must specify either a binning, lmax, "
+            "or a mode coupling object.")
+        
+    if (lmax is not None) and (bins is None) and (mc is None):
+        if verbose: 
+            print("Assuming unbinned and computing the mode coupling matrix.")
+        bins = create_binning(lmax)
+
+    if mc is None:
+        mc = mode_coupling(namap1, namap2, bins)
+
+    # compute the TEB spectra as appropriate
+    Cb = {}
+    if namap1.has_temp and namap2.has_temp:
+        Cb['TT'] = mc.compute_master(
+            namap1.field_spin0, namap2.field_spin0, mc.w00)[0]
+    if namap1.has_temp and namap2.has_pol:
+        spin1 = mc.compute_master(
+            namap1.field_spin0, namap2.field_spin2, mc.w02)
+        Cb['TE'] = spin1[0]
+        Cb['TB'] = spin1[1]
+    if namap1.has_pol and namap2.has_temp:
+        spin1 = mc.compute_master(
+            namap1.field_spin2, namap2.field_spin0, mc.w20)
+        Cb['ET'] = spin1[0]
+        Cb['BT'] = spin1[1]
+    if namap1.has_pol and namap2.has_pol:
+        spin2 = mc.compute_master(
+            namap1.field_spin2, namap2.field_spin2, mc.w22)
+        Cb['EE'] = spin2[0]
+        Cb['EB'] = spin2[1]
+        Cb['BE'] = spin2[2]
+        Cb['BB'] = spin2[3]
+
+    Cb['ell'] = mc.lb
+    return Cb
+            
 
 def util_bin_FFTspec_CAR(data,modlmap,bin_edges):
     digitized = np.digitize(np.ndarray.flatten(modlmap), bin_edges,right=True)
