@@ -1,158 +1,210 @@
 
 .. _quickstart:
 
-Quickstart
-==========
+Getting Started
+===============
 
-Workflow Tips
--------------
-Although this package works perfectly fine on a laptop, you should probably
-do your science analysis on the cluster. A set of four standard ACT resolution
-split maps takes ~5 minutes to cook into spectra on a 40-core tiger node. The
-same on your laptop would take more than three hours!
-
-Some clusters have Jupyter support, but we've found it nice to run this
-quickstart tutorial with `ipython`. You might need to install it to your conda
-environment.
-
-.. code:: bash
-
-  conda install ipython -n YOUR_ENV_NAME
-
-To get your plots to appear on your laptop, make sure to tunnel in with `ssh -Y`.
-
-NaMaster also depends on the environmental variable `OMP_NUM_THREADS` to
-determine how many threads to run in parallel. On tiger, I run
-
-.. code:: bash
-
-  export OMP_NUM_THREADS=40
-
-before running any code. You should set this, with the number corresponding to
-the number of cores on your machine.
-
-Simulated Maps
---------------
-
-In this example, we generate some fake spectra plagued by bright point sources.
-We then mask those sources and generate spectra which have been corrected for
-the mode coupling induced by our mask. This example is also available as a
-`Jupyter notebook`_.
+In this example, we generate some fake spectra plagued by bright point
+sources. We then mask those sources and generate spectra which have been
+corrected for the mode coupling induced by our mask.
 
 We start by importing our libraries.
 
-.. code:: python
+.. code:: ipython3
 
-  import nawrapper as nw
-  import pymaster as nmt
-  import numpy as np
-  import matplotlib.pyplot as plt
-  from pixell import enmap, enplot
+    import pymaster as nmt
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from pixell import enmap, enplot
+    
+    import nawrapper as nw
+    import nawrapper.maptools as maptools
 
-Next, we generate a random map realization for the spectrum
-:math:`C_{\ell} = \ell^{-2.5}`.
+Let's generate a random map to try doing analysis on. Next, we generate
+a random map realization for the spectrum
+:math:`C_{\ell} = \ell^{-2.5}`. We'll use a 2 arcminute pixel to make
+this fast.
 
-.. code:: python
+.. code:: ipython3
 
-  # map information
-  shape,wcs = enmap.geometry(shape=(1024,1024),
-      res=np.deg2rad(0.5/60.),pos=(0,0))
+    shape,wcs = enmap.geometry(shape=(1024,1024),
+                               res=np.deg2rad(2/60.),pos=(0,0))
+    ells = np.arange(0,2000,1)
+    ps = np.zeros(len(ells))
+    ps[2:] = 1/ells[2:]**2.5 # don't want monopole/dipole
+    imap = enmap.rand_map(shape,wcs,ps[np.newaxis,np.newaxis])
+    plt.imshow(imap)
 
-  # create power spectrum information
-  ells = np.arange(0,6000,1)
-  ps = np.zeros(len(ells))
-  ps[2:] = 1/ells[2:]**2.5 # don't want monopole/dipole
 
-  # generate a realization
-  imap = enmap.rand_map(shape,wcs,ps[np.newaxis, np.newaxis])
-  plt.imshow(imap)
 
-.. figure:: ../_static/randomlygeneratedmap.png
-  :scale: 60%
 
-Next, we generate a fake point source map and a matching source mask.
+.. parsed-literal::
 
-.. code:: python
+    <matplotlib.image.AxesImage at 0x2b342c5d00d0>
 
-  mask = enmap.ones(imap.shape, imap.wcs)
 
-  N_point_sources = 50
-  for i in range(N_point_sources):
-      mask[
-          np.random.randint(low=0, high=mask.shape[0]),
-          np.random.randint(low=0, high=mask.shape[1]) ] = 0
-  # apodize the pixels to make fake sources
-  point_source_map = 1-nw.apod_C2(mask, 0.1)
 
-  imap += point_source_map # add our sources to the map
-  mask = nw.apod_C2(mask, 0.5) # apodize the mask
 
-  # plot our cool results
-  fig, axes = plt.subplots(1, 2, figsize=(8,16))
-  axes[0].imshow(imap)
-  axes[1].imshow(mask)
+.. image:: ../_static/getting_started_files/getting_started_4_1.png
+   :width: 285px
+   :height: 257px
 
-.. figure:: ../_static/random_point_sources.png
 
-For additional realism we generate noise power spectra to add to our "splits".
+Next, let's generate a point source map. We'll add these sources to the
+map, and apodize to generate a mask.
 
-.. code:: python
+.. code:: ipython3
 
-  ells = np.arange(0,len(ps),1)
-  nl = np.ones(len(ells)) * 1e-8
+    mask = enmap.ones(imap.shape, imap.wcs)
+    
+    N_point_sources = 50
+    for i in range(N_point_sources):
+        mask[ 
+            np.random.randint(low=0, high=mask.shape[0]), 
+            np.random.randint(low=0, high=mask.shape[1]) ] = 0
+    point_source_map = 1 - maptools.apod_C2(mask, 0.5)
+    imap += point_source_map
+    mask = maptools.apod_C2(mask, 2)
+    
+    fig, axes = plt.subplots(1, 2, figsize=(10,20))
+    axes[0].imshow(imap)
+    axes[1].imshow(mask)
+    axes[0].set_title('Map with Point Sources')
+    axes[1].set_title('Point Source Mask')
+    plt.tight_layout()
 
-  noise_map_1 = enmap.rand_map(shape,wcs,nl[np.newaxis, np.newaxis])
-  noise_map_2 = enmap.rand_map(shape,wcs,nl[np.newaxis, np.newaxis])
 
-  plt.plot(ps, label="ps")
-  plt.plot(nl, label="noise")
-  plt.yscale('log')
-  plt.legend()
 
-.. figure:: ../_static/noise_power.png
-  :scale: 60%
+.. image:: ../_static/getting_started_files/getting_started_6_0.png
+   :width: 712px
+   :height: 347px
 
-For this example, we won't include a beam. Now we set up the
-:py:class:`nawrapper.ps.namap_car` objects, using as input our
-our original random realization summed with the noise realizations.
 
-.. code:: python
+For additional realism we generate noise power spectra to add to our
+“splits”.
 
-  namap_1 = nw.namap_car(maps=imap + noise_map_1, masks=mask)
-  namap_2 = nw.namap_car(maps=imap + noise_map_2, masks=mask)
+.. code:: ipython3
 
-Next we compute the mode-coupling matrix. We need the binning file, which
-we have in the `repository`_ under `notebooks/data/`. You'll need to point it to
-the right path on your own installation. This is the slow part, you might want
-to get a snack while you wait (about 5 minutes on 1 core for a map of this
-size).
+    ells = np.arange(0,len(ps),1)
+    nl = np.ones(len(ells)) * 1e-7
+    
+    plt.figure(figsize=(6,4))
+    plt.plot(ps, "-", label="signal")
+    plt.plot(nl, "-", label="noise")
+    plt.yscale('log')
+    plt.legend()
+    plt.ylabel(r'Power Spectrum $C_{\ell}$')
+    plt.xlabel(r'Multipole $\ell$')
 
-.. code:: python
 
-  binfile = 'data/BIN_ACTPOL_50_4_SC_low_ell'
-  bins = nw.read_bins(binfile)
-  mc = nw.mode_coupling(namap_1, namap_2, bins)
 
-Finally, we can compute some spectra! Pass in the namaps we created, with the
-mode coupling object.
 
-.. code:: python
+.. parsed-literal::
 
-  Cb = nw.compute_spectra(namap_1, namap_2, mc=mc)
+    Text(0.5, 0, 'Multipole $\\ell$')
 
-Let's plot it!
 
-.. code:: python
 
-  plt.plot(ps, 'k-', label='input')
-  plt.plot(Cb['ell'], Cb['TT'], 'r.', label='computed')
-  plt.legend()
-  plt.yscale('log')
 
-.. figure:: ../_static/result_ps.png
-  :scale: 60%
+.. image:: ../_static/getting_started_files/getting_started_8_1.png
+   :width: 413px
+   :height: 277px
 
-We've recovered our input spectrum!
 
-.. _repository: https://github.com/xzackli/nawrapper/tree/master/notebooks/data
-.. _Jupyter notebook: https://github.com/xzackli/nawrapper/blob/master/notebooks/Getting%20Started.ipynb
+.. code:: ipython3
+
+    noise_map_1 = enmap.rand_map(shape, wcs,
+                                 nl[np.newaxis, np.newaxis])
+    noise_map_2 = enmap.rand_map(shape, wcs,
+                                 nl[np.newaxis, np.newaxis])
+
+For this example, we won’t include a beam. Now we set up the
+``namap_car`` objects, using as input our our original random
+realization summed with the noise realizations.
+
+The Power Spectrum Part
+=======================
+
+.. code:: ipython3
+
+    namap_1 = nw.namap_car(maps=(imap + noise_map_1, None, None), masks=mask)
+    namap_2 = nw.namap_car(maps=(imap + noise_map_2, None, None), masks=mask)
+
+
+.. parsed-literal::
+
+    Assuming the same mask for both I and QU.
+    Creating a car namap. temperature: True, polarization: False
+    temperature beam not specified, setting temperature beam to 1.
+    Applying a k-space filter (kx=0, ky=0, apo=40), unpixwin: True
+    Computing spherical harmonics.
+    
+    Assuming the same mask for both I and QU.
+    Creating a car namap. temperature: True, polarization: False
+    temperature beam not specified, setting temperature beam to 1.
+    Applying a k-space filter (kx=0, ky=0, apo=40), unpixwin: True
+    Computing spherical harmonics.
+    
+
+
+Now let's compute the mode coupling matrix. First we need to set up a
+binning object. The easiest way to do this is ``create_binning`` from
+nawrapper, which takes a function for the weights and either a list of
+bin widths for ``widths=`` or an integer (in which case all bins will
+have the same width).
+
+You can load this from file (see ``nw.read_bins``))
+
+.. code:: ipython3
+
+    # 40 bins of width 50 and 50 bins of width 100
+    # lmax cuts off the end bins, so nothing over 1000 is included
+    bins = nw.create_binning(lmax=2000, lmin=2, 
+                             widths=[50]*40 + [100]*50, 
+                             weight_function=(lambda ell : ell**2))
+
+We associate a mode-coupling object with a directory. Here, we specify a
+relative path. The mode-coupling object will write the matrices to disk
+when it is done computing. Future runs will look at the specified path
+for precomputed mode-coupling matrices, and read them in if they exist.
+To recompute matrices, specify the argument ``overwrite=True``.
+
+.. code:: ipython3
+
+    mc = nw.mode_coupling(namap_1, namap_2, bins, mcm_dir='./quickstart_mcm/', overwrite=True)
+
+
+.. parsed-literal::
+
+    Computing new mode-coupling matrices.
+    Saving mode-coupling matrices to ./quickstart_mcm/
+
+
+Finally, we can compute some spectra!
+
+.. code:: ipython3
+
+    Cb = nw.compute_spectra(namap_1, namap_2, mc=mc)
+    print(Cb.keys())
+
+
+.. parsed-literal::
+
+    dict_keys(['TT', 'ell'])
+
+
+Let’s plot it!
+
+.. code:: ipython3
+
+    plt.plot(ps, 'k-', label='input')
+    plt.plot(Cb['ell'], Cb['TT'], 'r.', label='computed')
+    plt.legend()
+    plt.yscale('log')
+
+
+
+.. image:: ../_static/getting_started_files/getting_started_20_0.png
+   :width: 386px
+   :height: 251px
+
