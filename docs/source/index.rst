@@ -21,6 +21,7 @@ utility functions for turning these into dictionaries of power spectra.
 
    usage/installation
    usage/quickstart
+   usage/covmat
    usage/examples
    modules
 

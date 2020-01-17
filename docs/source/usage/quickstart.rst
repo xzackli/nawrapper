@@ -37,14 +37,6 @@ this fast.
 
 
 
-
-.. parsed-literal::
-
-    <matplotlib.image.AxesImage at 0x2b342c5d00d0>
-
-
-
-
 .. image:: ../_static/getting_started_files/getting_started_4_1.png
    :width: 285px
    :height: 257px
@@ -97,15 +89,6 @@ For additional realism we generate noise power spectra to add to our
     plt.xlabel(r'Multipole $\ell$')
 
 
-
-
-.. parsed-literal::
-
-    Text(0.5, 0, 'Multipole $\\ell$')
-
-
-
-
 .. image:: ../_static/getting_started_files/getting_started_8_1.png
    :width: 413px
    :height: 277px
@@ -131,6 +114,7 @@ The Power Spectrum Part
     namap_2 = nw.namap_car(maps=(imap + noise_map_2, None, None), masks=mask)
 
 
+This will print some diagnostic information by default.
 .. parsed-literal::
 
     Assuming the same mask for both I and QU.
