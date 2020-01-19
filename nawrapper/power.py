@@ -8,8 +8,9 @@ from pixell import enmap
 import nawrapper.maptools as maptools
 import json
 import os
-import abc, six, errno
-
+import abc
+import six
+import errno
 
 
 # need this decorator to make this class abstract
@@ -18,7 +19,7 @@ class abstract_namap():
     """Object for organizing map products."""
 
     @abc.abstractmethod
-    def __init__(self, maps, masks=None, beams=None, 
+    def __init__(self, maps, masks=None, beams=None,
                  unpixwin=True, verbose=True):
         r"""Generic abstract
 
@@ -34,42 +35,42 @@ class abstract_namap():
         ----------
         maps : ndarray or tuple
             The maps you want to operate on. This needs to be a tuple of
-            length 3, or an array of length `(3,) + map.shape`. 
+            length 3, or an array of length `(3,) + map.shape`.
         masks : ndarray or tuple
             The masks you want to operate on.
         beams: list or tuple
             The beams you want to use.
         unpixwin: bool
-            If true, we account for the pixel window function when computing 
-            power spectra. For healpix this is accomplished by modifying the 
+            If true, we account for the pixel window function when computing
+            power spectra. For healpix this is accomplished by modifying the
             beam in-place.
         verbose : bool
             Print various information about what is being assumed. You should
-            probably enable this the first time you try to run a particular 
-            scenario, but you can set this to false if you find it's annoying 
-            to have it printing so much stuff, like if you are computing many 
+            probably enable this the first time you try to run a particular
+            scenario, but you can set this to false if you find it's annoying
+            to have it printing so much stuff, like if you are computing many
             spectra in a loop.
 
-#         """
+        """
 
         # check the input to make sure nothing funny is happening. we want
         # input tuples! A tuple of three maps.
         if hasattr(maps, '__len__'):
             if len(maps) == 3:
                 self.map_I, self.map_Q, self.map_U = maps
-            elif type(maps) is enmap.ndmap and maps.ndim==2:
+            elif type(maps) is enmap.ndmap and maps.ndim == 2:
                 self.map_I, self.map_Q, self.map_U = maps, None, None
-            elif type(maps) is np.ndarray and maps.ndim==1:
+            elif type(maps) is np.ndarray and maps.ndim == 1:
                 self.map_I, self.map_Q, self.map_U = maps, None, None
             else:
                 raise ValueError(
                     "Pass a tuple or list of maps, which needs to be of\n"
-                    "length 3 (for IQU).\n" 
+                    "length 3 (for IQU).\n"
                     "For T only, try setting maps=(i_map, None, None).\n If "
                     "you wanted just pol maps, try maps=(None, q_map, u_map).")
 
-
-        if isinstance(self.map_I, enmap.ndmap) or isinstance(self.map_Q, enmap.ndmap):
+        if (isinstance(self.map_I, enmap.ndmap) or
+                isinstance(self.map_Q, enmap.ndmap)):
             self.mode = 'car'
         else:
             self.mode = 'healpix'
@@ -79,7 +80,8 @@ class abstract_namap():
             if len(masks) == 2:
                 self.mask_temp, self.mask_pol = masks
             elif isinstance(masks, np.ndarray):
-                if verbose: print("Assuming the same mask for both I and QU.")
+                if verbose:
+                    print("Assuming the same mask for both I and QU.")
                 self.mask_temp, self.mask_pol = masks, masks
         else:
             self.mask_temp, self.mask_pol = None, None
@@ -87,46 +89,50 @@ class abstract_namap():
         # a tuple of two beams
         if hasattr(beams, '__len__'):
             if len(beams) == 2:
-                self.beam_temp, self.beam_pol = beams[0].copy(), beams[1].copy()
+                self.beam_temp, self.beam_pol = beams[0].copy(
+                ), beams[1].copy()
             else:
-                if verbose: print("Assuming the same beams for both I and QU.")
+                if verbose:
+                    print("Assuming the same beams for both I and QU.")
                 self.beam_temp, self.beam_pol = beams.copy(), beams.copy()
         else:
-            self.beam_temp, self.beam_pol = None, None # we'll set to 1 later
-        
+            self.beam_temp, self.beam_pol = None, None  # we'll set to 1 later
+
         # remember which spectra to compute
         self.has_temp = (self.map_I is not None)
         self.has_pol = (self.map_Q is not None) and (self.map_U is not None)
-        
-        if verbose: 
-            print('Creating a %s namap. temperature: %s, polarization: %s' % 
-                (self.mode, self.has_temp, self.has_pol))
+
+        if verbose:
+            print('Creating a %s namap. temperature: %s, polarization: %s' %
+                  (self.mode, self.has_temp, self.has_pol))
 
         if ((self.map_Q is None and self.map_U is not None) or
                 (self.map_Q is not None and self.map_U is None)):
             raise ValueError("Q and U must both be specified for pol maps.")
-        if ((self.map_I is None) and (self.map_U is None) and (self.map_Q is None)):
+        if ((self.map_I is None) and
+                (self.map_U is None) and (self.map_Q is None)):
             raise ValueError("Must specify at least I or QU maps.")
 
         # set masks = 1 if not specified.
         if self.has_temp and self.mask_temp is None:
             self.mask_temp = self.map_I * 0.0 + 1.0
-            if verbose: 
+            if verbose:
                 print('temperature mask not specified, setting '
                       'temperature mask to one.')
         if self.has_pol and self.mask_pol is None:
             self.mask_pol = self.map_Q * 0.0 + 1.0
-            if verbose: 
+            if verbose:
                 print('polarization mask not specified, setting '
                       'polarization mask to one.')
 
-    def set_beam(self, 
+    def set_beam(self,
                  apply_healpix_window=False, verbose=False):
         """Set and extend the object's beam up to lmax."""
         if self.has_temp:
             if self.beam_temp is None:
-                if verbose: print("temperature beam not specified, setting " +
-                                  "temperature beam to 1.")
+                if verbose:
+                    print("temperature beam not specified, setting " +
+                          "temperature beam to 1.")
                 beam_temp = np.ones(self.lmax_beam)
             else:
                 beam_temp = np.ones(max(self.lmax_beam, len(self.beam_temp)))
@@ -135,8 +141,9 @@ class abstract_namap():
             self.beam_temp = beam_temp
         if self.has_pol:
             if self.beam_pol is None:
-                if verbose: print("polarization beam not specified, setting " +
-                                  "P beam to 1.")
+                if verbose:
+                    print("polarization beam not specified, setting " +
+                          "P beam to 1.")
                 beam_pol = np.ones(self.lmax_beam)
             else:
                 beam_pol = np.ones(max(self.lmax_beam, len(self.beam_pol)))
@@ -156,8 +163,8 @@ class namap_car(abstract_namap):
     will not change your results significantly.
     """
 
-    def __init__(self, maps, masks=None, beams=None, 
-                 unpixwin=True, kx=0, ky=0, kspace_apo=40, legacy_steve=False, 
+    def __init__(self, maps, masks=None, beams=None,
+                 unpixwin=True, kx=0, ky=0, kspace_apo=40, legacy_steve=False,
                  verbose=True, sub_shape=None, sub_wcs=None,
                  purify_e=False, purify_b=False):
         r"""Generate a CAR map container
@@ -171,43 +178,46 @@ class namap_car(abstract_namap):
         Parameters
         ----------
         maps : ndarray or tuple
-            The maps you want to operate on. This needs to be a tuple of 
-            length 3, or an array of length `(3,) + map.shape`. 
+            The maps you want to operate on. This needs to be a tuple of
+            length 3, or an array of length `(3,) + map.shape`.
         masks : ndarray or tuple
             The masks you want to operate on.
         beams: list or tuple
             The beams you want to use.
         unpixwin: bool
-            If true, we account for the pixel window function when computing 
-            power spectra. For healpix this is accomplished by modifying the 
+            If true, we account for the pixel window function when computing
+            power spectra. For healpix this is accomplished by modifying the
             beam in-place.
         kx : float
-            k-space horizontal filter mode, ky-modes with absolute value less than
-            kx are filtered.
+            k-space horizontal filter mode, ky-modes with absolute value less
+            than kx are filtered.
         kx : float
-            k-space vertical filter mode, kx-modes with absolute value less than
-            ky are filtered.
+            k-space vertical filter mode, kx-modes with absolute value less
+            than ky are filtered.
         kspace_apo : float
             optional parameter specifying width of apodization
         legacy_steve : bool
-            Shifts the mask by 1,1 relative to the maps to preproduce Steve's code.
+            Shifts the mask by 1,1 relative to the maps to preproduce Steve's
+            code.
         verbose : bool
             Print various information about what is being assumed. You should
-            probably enable this the first time you try to run a particular 
-            scenario, but you can set this to false if you find it's annoying 
-            to have it printing so much stuff, like if you are computing many 
+            probably enable this the first time you try to run a particular
+            scenario, but you can set this to false if you find it's annoying
+            to have it printing so much stuff, like if you are computing many
             spectra in a loop.
         """
-            
+
         super(namap_car, self).__init__(
-            maps=maps, masks=masks, beams=beams, 
+            maps=maps, masks=masks, beams=beams,
             unpixwin=unpixwin, verbose=verbose)
 
         self.shape = sub_shape
         self.wcs = sub_wcs
-        if self.shape is None: self.shape = self.mask_temp.shape
-        if self.wcs is None: self.wcs = self.mask_temp.wcs
-        
+        if self.shape is None:
+            self.shape = self.mask_temp.shape
+        if self.wcs is None:
+            self.wcs = self.mask_temp.wcs
+
         self.lmax_beam = int(180.0/abs(np.min(self.wcs.wcs.cdelt))) + 1
         self.set_beam(verbose=verbose)
         self.legacy_steve = legacy_steve
@@ -218,17 +228,19 @@ class namap_car(abstract_namap):
             if self.has_pol:
                 self.map_Q.wcs.wcs.crpix += np.array([-1, -1])
                 self.map_U.wcs.wcs.crpix += np.array([-1, -1])
-            if verbose: print('Applying legacy_steve correction.')
-        
+            if verbose:
+                print('Applying legacy_steve correction.')
+
         self.extract_and_filter_CAR(kx, ky, kspace_apo,
                                     legacy_steve, unpixwin, verbose=verbose)
 
-        if verbose: print("Computing spherical harmonics.\n")
+        if verbose:
+            print("Computing spherical harmonics.\n")
         # construct the a_lm of the maps
         if self.has_temp:
             self.field_spin0 = nmt.NmtField(
                 self.mask_temp, [self.map_I],
-                beam=self.beam_temp, wcs=self.wcs, n_iter=0, 
+                beam=self.beam_temp, wcs=self.wcs, n_iter=0,
                 purify_e=purify_e, purify_b=purify_b)
         if self.has_pol:
             self.field_spin2 = nmt.NmtField(
@@ -236,21 +248,22 @@ class namap_car(abstract_namap):
                 beam=self.beam_pol, wcs=self.wcs, n_iter=0,
                 purify_e=purify_e, purify_b=purify_b)
 
-
-    def extract_and_filter_CAR(self, kx, ky, kspace_apo, 
+    def extract_and_filter_CAR(self, kx, ky, kspace_apo,
                                legacy_steve, unpixwin, verbose=False):
         """Extract and filter this initialized CAR namap.
 
         See constructor for parameters.
         """
-        if verbose: print(
-            ('Applying a k-space filter (kx=%s, ky=%s' % (kx, ky)) +
-            ', apo=%s), unpixwin: %s' % (kspace_apo, unpixwin))
+        if verbose:
+            print(
+                ('Applying a k-space filter (kx=%s, ky=%s' % (kx, ky)) +
+                ', apo=%s), unpixwin: %s' % (kspace_apo, unpixwin))
 
         # extract to common shape and wcs
         if self.has_temp:
             self.map_I = enmap.extract(self.map_I, self.shape, self.wcs)
-            self.mask_temp = enmap.extract(self.mask_temp, self.shape, self.wcs)
+            self.mask_temp = enmap.extract(
+                self.mask_temp, self.shape, self.wcs)
 
         if self.has_pol:
             self.map_Q = enmap.extract(self.map_Q, self.shape, self.wcs)
@@ -278,7 +291,7 @@ class namap_car(abstract_namap):
 
 class namap_hp(abstract_namap):
 
-    def __init__(self, maps, masks=None, beams=None, unpixwin=True, 
+    def __init__(self, maps, masks=None, beams=None, unpixwin=True,
                  verbose=True, n_iter=3,
                  purify_e=False, purify_b=False):
         r"""Generate a healpix map container
@@ -292,27 +305,27 @@ class namap_hp(abstract_namap):
         Parameters
         ----------
         maps : ndarray or tuple
-            The maps you want to operate on. This needs to be a tuple of 
-            length 3, or an array of length `(3,) + map.shape`. 
+            The maps you want to operate on. This needs to be a tuple of
+            length 3, or an array of length `(3,) + map.shape`.
         masks : ndarray or tuple
             The masks you want to operate on.
         beams: list or tuple
             The beams you want to use.
         unpixwin: bool
-            If true, we account for the pixel window function when computing 
-            power spectra. For healpix this is accomplished by modifying the 
+            If true, we account for the pixel window function when computing
+            power spectra. For healpix this is accomplished by modifying the
             beam in-place.
         n_iter : int
             Number of spherical harmonic iterations, because healpix is not
             a very good pixellization.
         verbose : bool
             Print various information about what is being assumed. You should
-            probably enable this the first time you try to run a particular 
-            scenario, but you can set this to false if you find it's annoying 
-            to have it printing so much stuff, like if you are computing many 
+            probably enable this the first time you try to run a particular
+            scenario, but you can set this to false if you find it's annoying
+            to have it printing so much stuff, like if you are computing many
             spectra in a loop.
         """
-        
+
         super(namap_hp, self).__init__(
             maps=maps, masks=masks, beams=beams,
             unpixwin=unpixwin, verbose=verbose)
@@ -324,19 +337,25 @@ class namap_hp(abstract_namap):
 
         self.lmax_beam = 3 * self.nside
         self.set_beam(verbose=verbose)
-        self.pixwin_temp, self.pixwin_pol = hp.sphtfunc.pixwin(self.nside, pol=True)
-        if verbose: print("Including the healpix pixel window function.")
-        if self.has_temp: self.pixwin_temp = self.pixwin_temp[:len(self.beam_temp)]
-        if self.has_pol: self.pixwin_pol = self.pixwin_pol[:len(self.beam_pol)]
-        
-        # this is written so that the beam is kept separate from the pixel window
+        self.pixwin_temp, self.pixwin_pol = hp.sphtfunc.pixwin(
+            self.nside, pol=True)
+        if verbose:
+            print("Including the healpix pixel window function.")
         if self.has_temp:
-            beam_temp = self.beam_temp[:len(self.pixwin_temp)] * self.pixwin_temp
+            self.pixwin_temp = self.pixwin_temp[:len(self.beam_temp)]
+        if self.has_pol:
+            self.pixwin_pol = self.pixwin_pol[:len(self.beam_pol)]
+
+        # this is written so that the beam is kept separate from pixwin
+        if self.has_temp:
+            beam_temp = self.beam_temp[:len(
+                self.pixwin_temp)] * self.pixwin_temp
         if self.has_pol:
             beam_pol = self.beam_pol[:len(self.pixwin_pol)] * self.pixwin_pol
-        
+
         # construct the a_lm of the maps, depending on what data is available
-        if verbose: print("Computing spherical harmonics.\n")
+        if verbose:
+            print("Computing spherical harmonics.\n")
         if self.has_temp:
             self.field_spin0 = nmt.NmtField(
                 self.mask_temp, [self.map_I],
@@ -347,7 +366,7 @@ class namap_hp(abstract_namap):
                 self.mask_pol, [self.map_Q, self.map_U],
                 beam=beam_pol, n_iter=n_iter,
                 purify_e=purify_e, purify_b=purify_b)
-            
+
 
 class mode_coupling:
     r"""Wrapper around the NaMaster workspace object.
@@ -359,21 +378,24 @@ class mode_coupling:
     data.
     """
 
-    def __init__(self, namap1=None, namap2=None, bins=None, mcm_dir=None, 
-        overwrite=False, verbose=True):
+    def __init__(self, namap1=None, namap2=None, bins=None, mcm_dir=None,
+                 overwrite=False, verbose=True):
         r"""
         Create a `mode_coupling` object.
 
         namap1: namap
-            We use the mask in this namap to compute the mode-coupling matrices.
+            We use the mask in this namap to compute the mode-coupling
+            matrices.
         namap2: namap
-            We use the mask in this namap to compute the mode-coupling matrices.
+            We use the mask in this namap to compute the mode-coupling
+            matrices.
         bins: pymaster NmtBin object
-            We generate binned mode coupling matrices with this NaMaster binning
+            We generate binned mode coupling matrices with this NaMaster
+            binning
             object.
 
         mcm_dir: string
-            Specify a directory which contains the workspace files for this 
+            Specify a directory which contains the workspace files for this
             mode-coupling object.
         """
 
@@ -382,17 +404,20 @@ class mode_coupling:
 
         self.mcm_dir = mcm_dir
 
-        if (mcm_dir is not None) and (not overwrite) and os.path.isfile(os.path.join(self.mcm_dir, 'mcm.json')):
-            if verbose: print("Loading mode-coupling matrices from disk.")
+        if ((mcm_dir is not None) and (not overwrite) and
+                os.path.isfile(os.path.join(self.mcm_dir, 'mcm.json'))):
+            if verbose:
+                print("Loading mode-coupling matrices from disk.")
             self.load_from_dir(mcm_dir)
         else:
-            if verbose: print("Computing new mode-coupling matrices.")
+            if verbose:
+                print("Computing new mode-coupling matrices.")
             self.bins = bins
             self.lb = bins.get_effective_ells()
-            
-            if namap1.mode != namap2.mode: 
+
+            if namap1.mode != namap2.mode:
                 raise ValueError(
-                    'pixel types m1:%s, m2:%s incompatible' % 
+                    'pixel types m1:%s, m2:%s incompatible' %
                     (namap1.mode, namap2.mode))
 
             self.workspace_dict = {}
@@ -403,40 +428,40 @@ class mode_coupling:
                 self.w00 = nmt.NmtWorkspace()
                 self.w00.compute_coupling_matrix(
                     namap1.field_spin0, namap2.field_spin0, bins, n_iter=0)
-                self.workspace_dict[(0,0)] = self.w00
+                self.workspace_dict[(0, 0)] = self.w00
 
             if namap1.has_temp and namap2.has_pol:
                 self.w02 = nmt.NmtWorkspace()
                 self.w02.compute_coupling_matrix(
                     namap1.field_spin0, namap2.field_spin2, bins, n_iter=0)
-                self.workspace_dict[(0,2)] = self.w02
-            
+                self.workspace_dict[(0, 2)] = self.w02
+
             if namap1.has_pol and namap2.has_temp:
                 self.w20 = nmt.NmtWorkspace()
                 self.w20.compute_coupling_matrix(
                     namap1.field_spin2, namap2.field_spin0, bins, n_iter=0)
-                self.workspace_dict[(2,0)] = self.w20
+                self.workspace_dict[(2, 0)] = self.w20
 
             if namap1.has_pol and namap2.has_pol:
                 self.w22 = nmt.NmtWorkspace()
                 self.w22.compute_coupling_matrix(
                     namap1.field_spin2, namap2.field_spin2, bins, n_iter=0)
-                self.workspace_dict[(2,2)] = self.w22
+                self.workspace_dict[(2, 2)] = self.w22
 
             if self.mcm_dir is not None:
                 self.write_to_dir(self.mcm_dir)
-                if verbose: print("Saving mode-coupling matrices to " + self.mcm_dir)
-
+                if verbose:
+                    print("Saving mode-coupling matrices to " + self.mcm_dir)
 
     def load_from_dir(self, mcm_dir):
         """Read information from a nawrapper mode coupling directory."""
-        with open(os.path.join(mcm_dir,'mcm.json'), 'r') as read_file:
+        with open(os.path.join(mcm_dir, 'mcm.json'), 'r') as read_file:
             data = (json.load(read_file))
-            
+
             # convert lists into numpy arrays
             for bk in ['ells', 'bpws', 'weights']:
-                data['bin_kwargs'][bk] = np.array( data['bin_kwargs'][bk])
-            self.bins =  nabin(**data['bin_kwargs'])
+                data['bin_kwargs'][bk] = np.array(data['bin_kwargs'][bk])
+            self.bins = nabin(**data['bin_kwargs'])
             self.lb = self.bins.get_effective_ells()
 
             self.workspace_dict = {}
@@ -444,23 +469,22 @@ class mode_coupling:
             if 'w00' in data:
                 self.w00 = nmt.NmtWorkspace()
                 self.w00.read_from(os.path.join(mcm_dir, data['w00']))
-                self.workspace_dict[(0,0)] = self.w00
+                self.workspace_dict[(0, 0)] = self.w00
 
             if 'w02' in data:
                 self.w02 = nmt.NmtWorkspace()
                 self.w02.read_from(os.path.join(mcm_dir, data['w02']))
-                self.workspace_dict[(0,2)] = self.w02
+                self.workspace_dict[(0, 2)] = self.w02
 
             if 'w20' in data:
                 self.w20 = nmt.NmtWorkspace()
                 self.w20.read_from(os.path.join(mcm_dir, data['w20']))
-                self.workspace_dict[(2,0)] = self.w20
+                self.workspace_dict[(2, 0)] = self.w20
 
             if 'w22' in data:
                 self.w22 = nmt.NmtWorkspace()
                 self.w22.read_from(os.path.join(mcm_dir, data['w22']))
-                self.workspace_dict[(2,2)] = self.w22
-             
+                self.workspace_dict[(2, 2)] = self.w22
 
     def write_to_dir(self, mcm_dir):
         # create directory
@@ -497,15 +521,14 @@ class mode_coupling:
 
         # write bin kwargs
         data['bin_kwargs'] = {
-            'lmax' : lmax,
-            'ells' : np.arange(lmax+1).tolist(),
-            'bpws' : bpws.tolist(),
-            'weights' : weights.tolist()
+            'lmax': lmax,
+            'ells': np.arange(lmax+1).tolist(),
+            'bpws': bpws.tolist(),
+            'weights': weights.tolist()
         }
 
-        with open(os.path.join(mcm_dir,'mcm.json'), 'w') as write_file:
+        with open(os.path.join(mcm_dir, 'mcm.json'), 'w') as write_file:
             json.dump(data, write_file)
-
 
     def compute_master(self, f_a, f_b, wsp):
         """Compute mode-coupling-corrected spectra.
@@ -568,19 +591,18 @@ class nabin(nmt.NmtBin):
 
         # remember a dictionary so we can turn this into a JSON later
         self.init_dict = {
-            'lmax' : lmax,
-            'bpws' : bpws,
-            'ells' : ells,
-            'weights' : weights,
-            'nlb' : nlb,
-            'is_Dell' : is_Dell,
-            'f_ell' : f_ell
+            'lmax': lmax,
+            'bpws': bpws,
+            'ells': ells,
+            'weights': weights,
+            'nlb': nlb,
+            'is_Dell': is_Dell,
+            'f_ell': f_ell
         }
         # can't json a numpy array
         for array_key in ('bpws', 'ells', 'weights', 'f_ell'):
             if isinstance(self.init_dict[array_key], np.ndarray):
                 self.init_dict[array_key] = self.init_dict[array_key].tolist()
-
 
         if (bpws is None) and (ells is None) and (weights is None) \
            and (nlb is None):
@@ -646,14 +668,14 @@ def read_bins(file, lmax=7925, is_Dell=False):
 def create_binning(lmax, lmin=2, widths=1, weight_function=None):
     """Create a nabin object conveniently."""
 
-    # if widths is an integer, create a constant 
+    # if widths is an integer, create a constant
     ells = np.arange(lmax+1).astype(int)
     bpws = -np.ones_like(ells).astype(int)  # Array of bandpower indices
 
     if not hasattr(widths, '__len__'):
         # we have an array of lengths!
-        widths_list = [widths for i in 
-            range(np.ceil((lmax-lmin)/widths).astype(int)+1)]
+        widths_list = [widths for i in
+                       range(np.ceil((lmax-lmin)/widths).astype(int)+1)]
         widths = widths_list
 
     bin_left = lmin
@@ -666,12 +688,12 @@ def create_binning(lmax, lmin=2, widths=1, weight_function=None):
         weights = weights = np.ones_like(ells)
     else:
         weights = [weight_function(l) for l in ells]
-    
+
     b = nabin(
-        lmax=lmax, bpws=bpws, ells=ells, 
+        lmax=lmax, bpws=bpws, ells=ells,
         weights=weights, is_Dell=False)
     return b
-    
+
 
 def bin_spec_dict(Cb, binleft, binright, lmax):
     """Bin an unbinned spectra dictionary with a specified l^2 binning."""
@@ -681,7 +703,8 @@ def bin_spec_dict(Cb, binleft, binright, lmax):
     result = {}
     for spec_key in Cb:
         ell_sub_list = [np.arange(l, r) for (l, r) in zip(binleft, binright+1)]
-        lb = np.array([np.sum(ell_sub) / len(ell_sub) for ell_sub in ell_sub_list])
+        lb = np.array([np.sum(ell_sub) / len(ell_sub)
+                       for ell_sub in ell_sub_list])
         cl_from_zero = np.zeros(lmax + 1)
         cl_from_zero[Cb['ell'].astype(int)] = Cb[spec_key]
         weights = np.arange(lmax + 1) * (np.arange(lmax + 1) + 1)
@@ -704,24 +727,28 @@ def mkdir_p(path):
             raise
 
 
-def compute_spectra(namap1, namap2, 
+def compute_spectra(namap1, namap2,
                     bins=None, mc=None, lmax=None, verbose=True):
     r"""Compute all of the spectra between two maps.
 
-    This computes all cross spectra between two :py:class:`nawrapper.power.abstract_namap`
+    This computes all cross spectra between two
+    :py:class:`nawrapper.power.abstract_namap`
     for which there is information. For example, TE spectra will be computed
     only if the first map has a temperature map, and the second has a
     polarization map.
 
     Parameters
     ----------
-    namap1 : :py:class:`nawrapper.power.namap_hp` or :py:class:`nawrapper.ps.namap_car`.
+    namap1 : :py:class:`nawrapper.power.namap_hp` or
+        :py:class:`nawrapper.ps.namap_car`.
         The first map to compute correlations with.
-    namap2 : :py:class:`nawrapper.power.namap_hp` or :py:class:`nawrapper.ps.namap_car`.
+    namap2 : :py:class:`nawrapper.power.namap_hp` or
+        :py:class:`nawrapper.ps.namap_car`.
         To be correlated with `namap1`.
     bins : NaMaster NmtBin object (optional)
         At least one of `bins` or `mc` must be specified. If you specify
-        `bins` (possibly from the output of :py:func:`nawrapper.power.read_bins`)
+        `bins` (possibly from the output of
+        :py:func:`nawrapper.power.read_bins`)
         then a new mode coupling matrix will be computed within this function
         call. If you have already computed a relevant mode-coupling matrix,
         then pass `mc` instead.
@@ -735,14 +762,14 @@ def compute_spectra(namap1, namap2,
         as dictionary keys. This also contains the bin centers as key 'ell'.
 
     """
-    
+
     if (bins is None) and (mc is None) and (lmax is None):
         raise ValueError(
             "You must specify either a binning, lmax, "
             "or a mode coupling object.")
-        
+
     if (lmax is not None) and (bins is None) and (mc is None):
-        if verbose: 
+        if verbose:
             print("Assuming unbinned and computing the mode coupling matrix.")
         bins = create_binning(lmax)
 
@@ -774,32 +801,31 @@ def compute_spectra(namap1, namap2,
 
     Cb['ell'] = mc.lb
     return Cb
-            
 
-def util_bin_FFTspec_CAR(data,modlmap,bin_edges):
-    digitized = np.digitize(np.ndarray.flatten(modlmap), bin_edges,right=True)
-    return np.bincount(digitized,(data).reshape(-1))[1:-1]/np.bincount(digitized)[1:-1]
+
+def util_bin_FFTspec_CAR(data, modlmap, bin_edges):
+    digitized = np.digitize(np.ndarray.flatten(modlmap), bin_edges, right=True)
+    return np.bincount(
+        digitized, (data).reshape(-1))[1:-1]/np.bincount(digitized)[1:-1]
+
 
 def util_bin_FFT_CAR(map1, map2, mask, beam1, beam2, lmax=8000):
     """Compute the FFTs, multiply, bin
-    
+
     Beams are multiplied at bin centers. This is the worst
     job you could do for calculating power spectra.
     """
-    beam_ells = np.arange(lmax+1)
+    # beam_ells = np.arange(lmax+1)
 
     kmap1 = enmap.fft(map1*mask, normalize="phys")
     kmap2 = enmap.fft(map2*mask, normalize="phys")
     power = (kmap1*np.conj(kmap2)).real
-    
-    bin_edges = np.arange(0,lmax,40)
+
+    bin_edges = np.arange(0, lmax, 40)
     centers = (bin_edges[1:] + bin_edges[:-1])/2.
     w2 = np.mean(mask**2.)
-    modlmap = enmap.modlmap(map1.shape,map1.wcs)
-    binned_power = util_bin_FFTspec_CAR(power/w2,modlmap,bin_edges)
+    modlmap = enmap.modlmap(map1.shape, map1.wcs)
+    binned_power = util_bin_FFTspec_CAR(power/w2, modlmap, bin_edges)
     binned_power *= beam1[centers.astype(int)]
     binned_power *= beam2[centers.astype(int)]
     return centers, binned_power
-
-
-
