@@ -1,13 +1,12 @@
 """Power spectrum objects and utilities."""
-from __future__ import print_function
-import pymaster as nmt
-import healpy as hp
 import numpy as np
-from pixell import enmap
-import nawrapper.maptools as maptools
-import nawrapper.power as power
 from scipy.signal import savgol_filter
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
+import pymaster as nmt
+import nawrapper.power as power
+# import nawrapper.maptools as maptools
+# import healpy as hp
+# from pixell import enmap
 
 
 def delta(a, b):
@@ -43,9 +42,11 @@ class nacov:
         Parameters
         ----------
         namap1: namap
-            We use the mask in this namap to compute the mode-coupling matrices.
+            We use the mask in this namap to compute the mode-coupling
+            matrices.
         namap2: namap
-            We use the mask in this namap to compute the mode-coupling matrices.
+            We use the mask in this namap to compute the mode-coupling
+            matrices.
 
         """
         self.lmax = mc_12.bins.lmax
@@ -225,7 +226,8 @@ class nacov:
             a2b2,
             self.mc_12.workspace_dict[(spins[0], spins[1])],
             wb=self.mc_12.workspace_dict[(spins[2], spins[3])],
-        ).reshape([self.num_ell, len(ordering_a), self.num_ell, len(ordering_b)])
+        ).reshape([self.num_ell, len(ordering_a),
+                   self.num_ell, len(ordering_b)])
 
         for i, AB in enumerate(ordering_a):
             for j, CD in enumerate(ordering_b):
@@ -261,7 +263,8 @@ class nacov:
     The goal of this is to produce a smooth theory curve for use in covariance.
     """
 
-    def smooth_and_interpolate(self, lb, cb, smoothing_window, smoothing_polyorder):
+    def smooth_and_interpolate(self, lb, cb, smoothing_window,
+                               smoothing_polyorder):
         return np.interp(
             x=np.arange(self.lmax + 1),
             xp=lb,
@@ -284,7 +287,7 @@ def get_Nl(
 
     Parameters
     ----------
-        theta_fwhm : list of float: 
+        theta_fwhm : list of float:
             beam resolution in arcmin
         sigma_T : list of float
             temperature resolution in muK
@@ -306,7 +309,7 @@ def get_Nl(
     sigma_T = sigma_T * np.array([np.pi / 60.0 / 180.0])
     num_channels = len(theta_fwhm)
     f_sky = f_sky
-    ells = np.arange(l_max)
+    # ells = np.arange(l_max)
 
     # compute noise in muK**2, adapted from Monte Python
     noise_T = np.zeros(l_max, "float64")
