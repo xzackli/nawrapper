@@ -20,7 +20,7 @@ def delta(a, b):
 class nacov:
     r"""Wrapper around the NaMaster covariance workspace object.
 
-    This object contains the computationally intensive parts of covariance 
+    This object contains the computationally intensive parts of covariance
     computation -- the coupling coefficients.
     """
 
@@ -35,6 +35,7 @@ class nacov:
         noise=None,
         smoothing_window=11,
         smoothing_polyorder=3,
+        cosmic_variance=True
     ):
         r"""
         Create a `nacov` object.
@@ -56,6 +57,7 @@ class nacov:
         self.namap2 = namap2
         self.bins = mc_12.bins
         self.num_ell = len(mc_12.bins.get_effective_ells())
+        self.cosmic_variance = cosmic_variance
 
         self.Cl11 = power.compute_spectra(namap1, namap1, mc=mc_11)
         self.Cl12 = power.compute_spectra(namap1, namap2, mc=mc_12)
@@ -101,8 +103,8 @@ class nacov:
                     )
                     - self.signal[XY]
                 )
-                self.noise[X + "1" + Y + "1"] = np.maximum(
-                    self.noise[X + "1" + Y + "1"], 0.0
+                self.noise[X + "1" + Y + "1"] = np.abs(
+                    self.noise[X + "1" + Y + "1"]
                 )
             if (X + "2" + Y + "2") not in self.noise:
                 self.noise[X + "2" + Y + "2"] = (
@@ -114,8 +116,8 @@ class nacov:
                     )
                     - self.signal[XY]
                 )
-                self.noise[X + "2" + Y + "2"] = np.maximum(
-                    self.noise[X + "2" + Y + "2"], 0.0
+                self.noise[X + "2" + Y + "2"] = np.abs(
+                    self.noise[X + "2" + Y + "2"]
                 )
 
         # any signal or noise not specified is set to zero
@@ -124,24 +126,30 @@ class nacov:
 
         self.beam = {}
         self.beam["T1"] = (
-            namap1.beam_temp[: self.lmax + 1] * namap1.pixwin_temp[: self.lmax + 1]
+            namap1.beam_temp[: self.lmax + 1] *
+            namap1.pixwin_temp[: self.lmax + 1]
         )
         self.beam["T2"] = (
-            namap2.beam_temp[: self.lmax + 1] * namap2.pixwin_temp[: self.lmax + 1]
+            namap2.beam_temp[: self.lmax + 1] *
+            namap2.pixwin_temp[: self.lmax + 1]
         )
         self.beam["E1"] = (
-            namap1.beam_pol[: self.lmax + 1] * namap1.pixwin_pol[: self.lmax + 1]
+            namap1.beam_pol[: self.lmax + 1] *
+            namap1.pixwin_pol[: self.lmax + 1]
         )
         self.beam["E2"] = (
-            namap2.beam_pol[: self.lmax + 1] * namap2.pixwin_pol[: self.lmax + 1]
+            namap2.beam_pol[: self.lmax + 1] *
+            namap2.pixwin_pol[: self.lmax + 1]
         )
 
         # currently no difference between E and B beam
         self.beam["B1"] = (
-            namap1.beam_pol[: self.lmax + 1] * namap1.pixwin_pol[: self.lmax + 1]
+            namap1.beam_pol[: self.lmax + 1] *
+            namap1.pixwin_pol[: self.lmax + 1]
         )
         self.beam["B2"] = (
-            namap2.beam_pol[: self.lmax + 1] * namap2.pixwin_pol[: self.lmax + 1]
+            namap2.beam_pol[: self.lmax + 1] *
+            namap2.pixwin_pol[: self.lmax + 1]
         )
 
         # for iterating over the output.
@@ -164,11 +172,12 @@ class nacov:
 
     def total_spec(self, XY, m1, m2):
         X, Y = XY
-        return (
-            (self.signal[XY] + self.noise[X + str(m1) + Y + str(m2)])
-            * self.beam[X + str(m1)]
-            * self.beam[Y + str(m2)]
-        )
+        if self.cosmic_variance:
+            return ((self.signal[XY] + self.noise[X + str(m1) + Y + str(m2)]) *
+                    self.beam[X + str(m1)] * self.beam[Y + str(m2)])
+        else:
+            return ((self.noise[X + str(m1) + Y + str(m2)]) *
+                    self.beam[X + str(m1)] * self.beam[Y + str(m2)])
 
     def cl_inputs(self, s1, s2, m1, m2):
         return [self.total_spec(XY, m1, m2) for XY in self.ordering[(s1, s2)]]
@@ -272,7 +281,7 @@ def get_Nl(
     """
     Get Knox TT noise curve.
     Uses the Planck bluebook parameters by default.
-    
+
     Parameters
     ----------
         theta_fwhm : list of float: 
@@ -309,4 +318,3 @@ def get_Nl(
             )
         noise_T[l] = 1 / noise_T[l]
     return noise_T
-
