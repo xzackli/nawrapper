@@ -75,8 +75,8 @@ def get_steve_apo(shape, wcs, width, N_cut=0):
 
     Maps of actual data are unlikely to be periodic, which will induce
     ringing when one applies a k-space filter. To solve this, we taper the
-    edges of the map to zero prior to filtering. This taper was written to match
-    the output of Steve's power spectrum pipeline, for reproducibility.
+    edges of the map to zero prior to filtering. This taper was written to
+    match the output of Steve's power spectrum pipeline, for reproducibility.
 
     See :py:func:`nawrapper.ps.kfilter_map`.
 
@@ -94,13 +94,14 @@ def get_steve_apo(shape, wcs, width, N_cut=0):
     Returns
     -------
     apo : enmap
-        A smooth mask that is one in the center and tapers to zero at the edges.
+        A smooth mask that is one in the center and tapers to zero at the
+        edges.
 
     """
     apo = enmap.ones(shape, wcs=wcs)
     apo_i = np.arange(width)
     apo_profile = 1-(-np.sin(2.0*np.pi*(width-apo_i) /
-                     (width-N_cut))/(2.0*np.pi)
+                             (width-N_cut))/(2.0*np.pi)
                      + (width-apo_i)/(width-N_cut))
 
     # set it up for x and y edges
@@ -193,20 +194,20 @@ def sub_mono_di(map_in, mask_in, nside,
 
 def get_cmb_sim_hp(signal, nside_out):
     """Generate a healpix realization of the spectra.
-    
+
     Parameters
     ----------
     signal : dictionary
-        dictionary containing spectra starting from ell=0 with keys 
+        dictionary containing spectra starting from ell=0 with keys
         TT, EE, BB, TE, EB, TE.
     nside_out : int
         output map resolution
     """
     cmb_sim = hp.synfast(
         cls=(
-            signal['TT'], signal['EE'], signal['BB'], 
+            signal['TT'], signal['EE'], signal['BB'],
             signal['TE'], signal['EB'], signal['TE']*0.0
-            ),
+        ),
         nside=nside_out,
         pixwin=True, verbose=False, new=True
     )

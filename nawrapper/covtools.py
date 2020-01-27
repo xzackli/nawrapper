@@ -96,29 +96,24 @@ class nacov:
 
             if (X + "1" + Y + "1") not in self.noise:
                 self.noise[X + "1" + Y + "1"] = (
-                    self.smooth_and_interpolate(
-                        np.arange(self.lmax + 1),
-                        self.bins.unbin_cell(self.Cl11[XY]),
-                        smoothing_window,
-                        smoothing_polyorder,
-                    )
-                    - self.signal[XY]
+                    self.get_smooth_noise(
+                        cb=self.Cl11[XY],
+                        signal=self.signal[XY],
+                        smoothing_polyorder=smoothing_polyorder)
                 )
-                self.noise[X + "1" + Y + "1"] = np.abs(
-                    self.noise[X + "1" + Y + "1"]
-                )
+                # self.smooth_and_interpolate(
+                #     np.arange(self.lmax + 1),
+                #     self.bins.unbin_cell(self.Cl11[XY]),
+                #     smoothing_window,
+                #     smoothing_polyorder,
+                # )
+                # - self.signal[XY]
             if (X + "2" + Y + "2") not in self.noise:
                 self.noise[X + "2" + Y + "2"] = (
-                    self.smooth_and_interpolate(
-                        np.arange(self.lmax + 1),
-                        self.bins.unbin_cell(self.Cl22[XY]),
-                        smoothing_window,
-                        smoothing_polyorder,
-                    )
-                    - self.signal[XY]
-                )
-                self.noise[X + "2" + Y + "2"] = np.abs(
-                    self.noise[X + "2" + Y + "2"]
+                    self.get_smooth_noise(
+                        cb=self.Cl22[XY],
+                        signal=self.signal[XY],
+                        smoothing_polyorder=smoothing_polyorder)
                 )
 
         # any signal or noise not specified is set to zero
@@ -258,6 +253,16 @@ class nacov:
                         if verbose:
                             print(a, b, c, d)
                         self.compute_subcovmat(spins=(a, b, c, d))
+
+    def get_smooth_noise(self, cb, signal,
+                         smoothing_polyorder):
+        diff = np.abs(cb - self.bins.bin_cell(signal))
+        poly = np.poly1d(
+            np.polyfit(self.lb,
+                       np.log(diff),
+                       w=1 / np.log(np.sqrt(2 / (2 * self.lb + 1)) * diff),
+                       deg=smoothing_polyorder))
+        return np.exp(poly(np.arange(self.lmax + 1)))
 
     """Smooth and interpolate a spectrum up to lmax.
     The goal of this is to produce a smooth theory curve for use in covariance.

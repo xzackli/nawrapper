@@ -110,10 +110,12 @@ def load_planck_half_missions(
     beam_EE = np.sqrt(np.maximum(1e-13, beam_Wl_hdu[2].data["EE_2_EE"][0]))
 
     mfile_1 = os.path.join(
-        map_dir, ("HFI_SkyMap_" + freq1 + "_2048_R3.01_halfmission-" + split1 + ".fits")
+        map_dir, ("HFI_SkyMap_" + freq1 +
+                  "_2048_R3.01_halfmission-" + split1 + ".fits")
     )
     mfile_2 = os.path.join(
-        map_dir, ("HFI_SkyMap_" + freq2 + "_2048_R3.01_halfmission-" + split2 + ".fits")
+        map_dir, ("HFI_SkyMap_" + freq2 +
+                  "_2048_R3.01_halfmission-" + split2 + ".fits")
     )
 
     maskfile1 = os.path.join(
@@ -199,8 +201,10 @@ def preprocess_maps(maps, masks, missing_pixel, pol_eff, nside):
 def get_half_mission_namap(freq1, freq2, map_dir, mask_dir, beam_dir):
 
     # maps and masks with _raw are those which have not been proprocessed
-    maps_1_raw, masks_1_raw, maps_2_raw, masks_2_raw, beams = load_planck_half_missions(
-        map_dir=map_dir, mask_dir=mask_dir, beam_dir=beam_dir, freq1=freq1, freq2=freq2
+    (maps_1_raw, masks_1_raw,
+     maps_2_raw, masks_2_raw, beams) = load_planck_half_missions(
+        map_dir=map_dir, mask_dir=mask_dir,
+        beam_dir=beam_dir, freq1=freq1, freq2=freq2
     )
 
     pol_eff_1 = param_2018["pol_efficiency"][freq1]
@@ -219,7 +223,8 @@ def get_half_mission_namap(freq1, freq2, map_dir, mask_dir, beam_dir):
 
 
 class PlanckCov:
-    def __init__(self, ellspath, covpath="covmat.dat", clpath="data_extracted.dat"):
+    def __init__(self, ellspath, covpath="covmat.dat",
+                 clpath="data_extracted.dat"):
         self.cov = np.linalg.inv(np.genfromtxt(covpath))
         self.ells = np.genfromtxt(ellspath, usecols=0, unpack=True)
         self.cls = np.genfromtxt(clpath, usecols=1, unpack=True)
@@ -254,8 +259,8 @@ class PlanckCov:
         i = self.key_index_dict[spec]
 
         subcov = self.get_subcov(spec, verbose=False)
-        ells = self.ells[self.sub_indices[i] : self.sub_indices[i + 1]]
-        cl = self.cls[self.sub_indices[i] : self.sub_indices[i + 1]]
+        ells = self.ells[self.sub_indices[i]: self.sub_indices[i + 1]]
+        cl = self.cls[self.sub_indices[i]: self.sub_indices[i + 1]]
         err = np.sqrt(np.diag(subcov))
 
         return ells, cl, err, subcov
@@ -264,9 +269,9 @@ class PlanckCov:
         """
         spec: {TT, TE, or EE},  {'100x100', '143x143', '143x217', '217x217'}
         cross: string, i.e.
-        
-        returns tuple: 
-            ells, cl, subcovariance matrix 
+
+        returns tuple:
+            ells, cl, subcovariance matrix
         """
 
         i = self.key_index_dict[spec1]
@@ -280,8 +285,8 @@ class PlanckCov:
             print(spec2, self.sub_indices[j], self.sub_indices[j + 1])
 
         subcov = self.cov[
-            self.sub_indices[i] : self.sub_indices[i + 1],
-            self.sub_indices[j] : self.sub_indices[j + 1],
+            self.sub_indices[i]: self.sub_indices[i + 1],
+            self.sub_indices[j]: self.sub_indices[j + 1],
         ]
         return subcov
 
