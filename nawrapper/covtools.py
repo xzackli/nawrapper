@@ -32,6 +32,7 @@ class nacov:
         mc_22,
         signal=None,
         noise=None,
+        noise_smoothing_mode='savgol',
         smoothing_window=11,
         smoothing_polyorder=3,
         cosmic_variance=True
@@ -68,6 +69,9 @@ class nacov:
             self.signal = {}
         else:
             self.signal = signal
+            # process keys in signal, cutting at lmax
+            for k in self.signal:
+                self.signal[k] = self.signal[k][:self.lmax+1]
 
         if noise is None:
             self.noise = {}
@@ -95,26 +99,37 @@ class nacov:
                 )
 
             if (X + "1" + Y + "1") not in self.noise:
-                self.noise[X + "1" + Y + "1"] = (
-                    self.get_smooth_noise(
-                        cb=self.Cl11[XY],
-                        signal=self.signal[XY],
-                        smoothing_polyorder=smoothing_polyorder)
-                )
-                # self.smooth_and_interpolate(
-                #     np.arange(self.lmax + 1),
-                #     self.bins.unbin_cell(self.Cl11[XY]),
-                #     smoothing_window,
-                #     smoothing_polyorder,
-                # )
-                # - self.signal[XY]
+
+                if noise_smoothing_mode == 'savgol':
+                    self.noise[X + "1" + Y + "1"] = np.abs(self.smooth_and_interpolate(
+                        np.arange(self.lmax + 1),
+                        self.bins.unbin_cell(self.Cl11[XY]),
+                        smoothing_window,
+                        smoothing_polyorder,
+                    ) - self.signal[XY])
+                elif noise_smoothing_mode == 'poly':
+                    self.noise[X + "1" + Y + "1"] = (
+                        self.get_smooth_noise(
+                            cb=self.Cl11[XY],
+                            signal=self.signal[XY],
+                            smoothing_polyorder=smoothing_polyorder)
+                    )
+
             if (X + "2" + Y + "2") not in self.noise:
-                self.noise[X + "2" + Y + "2"] = (
-                    self.get_smooth_noise(
-                        cb=self.Cl22[XY],
-                        signal=self.signal[XY],
-                        smoothing_polyorder=smoothing_polyorder)
-                )
+                if noise_smoothing_mode == 'savgol':
+                    self.noise[X + "2" + Y + "2"] = np.abs(self.smooth_and_interpolate(
+                        np.arange(self.lmax + 1),
+                        self.bins.unbin_cell(self.Cl22[XY]),
+                        smoothing_window,
+                        smoothing_polyorder,
+                    ) - self.signal[XY])
+                elif noise_smoothing_mode == 'poly':
+                    self.signal[XY] = self.smooth_and_interpolate(
+                        np.arange(self.lmax + 1),
+                        self.bins.unbin_cell(self.Cl12[XY]),
+                        smoothing_window,
+                        smoothing_polyorder,
+                    )
 
         # any signal or noise not specified is set to zero
         self.noise = defaultdict(lambda: np.zeros(self.lmax + 1), self.noise)
@@ -276,6 +291,84 @@ class nacov:
             fp=savgol_filter(cb, smoothing_window, smoothing_polyorder),
             right=0,
         )
+
+
+def compute_covmat(namap1, namap2, bins,
+                   mc_11=None, mc_12=None, mc_22=None,
+                   signal=None,
+                   noise=None,
+                   smoothing_window=11,
+                   smoothing_polyorder=3,
+                   cosmic_variance=True,
+                   verbose=True):
+    r"""Compute all of the relevant covariances between two namap.
+
+    This computes all covarainces between two
+    :py:class:`nawrapper.power.abstract_namap`
+    for which there is information.
+
+    Parameters
+    ----------
+    namap1 : :py:class:`nawrapper.power.namap_hp` or
+        :py:class:`nawrapper.ps.namap_car`.
+        The first map to compute correlations with.
+    namap2 : :py:class:`nawrapper.power.namap_hp` or
+        :py:class:`nawrapper.ps.namap_car`.
+        To be correlated with `namap1`.
+
+    bins : NaMaster NmtBin object
+        The binning scheme used for this. This must match the 
+        mode-coupling objects, if you pass those.
+
+    mc_11 : :py:class:`nawrapper.power.mode_coupling` object (optional)
+        This object contains precomputed mode-coupling matrices for the
+        auto-spectrum of `namap1`.
+    mc_12 : :py:class:`nawrapper.power.mode_coupling` object (optional)
+        This object contains precomputed mode-coupling matrices for the
+        cross-spectrum between `namap1` and `namap2`.
+    mc_22 : :py:class:`nawrapper.power.mode_coupling` object (optional)
+        This object contains precomputed mode-coupling matrices for the
+        auto-spectrum of `namap2`.
+
+    signal: dictionary
+        The unbinned input spectra, must have keys TT, TE, EE, etc.
+        Any unspecified signal spectra will be estimated from the cross-
+        spectrum beteween namap1 and namap2.
+    noise: dictionary
+        The unbinned noise power spectra. Must have keys T1T1, T2T2,
+        and others of the form XiYj, where X,Y are in T, E, B, and i,j are
+        1 or 2. These refer to the noise spectra in various maps.
+        Unspecified noise where `i == j` will be computed from the auto minus
+        cross-spectra, and `i != j` will be set to zero.
+
+
+    smoothing_window : int
+        Savgol filter smoothing window, for smoothing the estimated
+        signal and noise spectra.
+    smoothing_polyorder : int
+        Savgol filter polynomial order, for smoothing the estimated
+        signal and noise spectra.
+
+    Returns
+    -------
+    dictionary
+        Binned covariances, with the relevant covariances (i.e. `TETT`)
+        as dictionary keys. This also contains the bin centers as key 'ell'.
+    """
+
+    if mc_11 is None:
+        mc_11 = power.mode_coupling(namap1, namap1, bins=bins, verbose=False)
+    if mc_12 is None:
+        mc_12 = power.mode_coupling(namap1, namap2, bins=bins, verbose=False)
+    if mc_22 is None:
+        mc_22 = power.mode_coupling(namap2, namap2, bins=bins, verbose=False)
+
+    my_cov = nacov(namap1, namap2, mc_11=mc_11, mc_12=mc_12, mc_22=mc_22,
+                   signal=signal, noise=noise,
+                   smoothing_window=smoothing_window, smoothing_polyorder=smoothing_polyorder)
+    my_cov.compute()
+
+    return my_cov.covmat
 
 
 def get_Nl(
