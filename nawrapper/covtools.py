@@ -101,12 +101,13 @@ class nacov:
             if (X + "1" + Y + "1") not in self.noise:
 
                 if noise_smoothing_mode == 'savgol':
-                    self.noise[X + "1" + Y + "1"] = np.abs(self.smooth_and_interpolate(
-                        np.arange(self.lmax + 1),
-                        self.bins.unbin_cell(self.Cl11[XY]),
-                        smoothing_window,
-                        smoothing_polyorder,
-                    ) - self.signal[XY])
+                    self.noise[X + "1" + Y + "1"] = np.abs(
+                        self.smooth_and_interpolate(
+                            np.arange(self.lmax + 1),
+                            self.bins.unbin_cell(self.Cl11[XY]),
+                            smoothing_window,
+                            smoothing_polyorder,
+                        ) - self.signal[XY])
                 elif noise_smoothing_mode == 'poly':
                     self.noise[X + "1" + Y + "1"] = (
                         self.get_smooth_noise(
@@ -117,12 +118,13 @@ class nacov:
 
             if (X + "2" + Y + "2") not in self.noise:
                 if noise_smoothing_mode == 'savgol':
-                    self.noise[X + "2" + Y + "2"] = np.abs(self.smooth_and_interpolate(
-                        np.arange(self.lmax + 1),
-                        self.bins.unbin_cell(self.Cl22[XY]),
-                        smoothing_window,
-                        smoothing_polyorder,
-                    ) - self.signal[XY])
+                    self.noise[X + "2" + Y + "2"] = np.abs(
+                        self.smooth_and_interpolate(
+                            np.arange(self.lmax + 1),
+                            self.bins.unbin_cell(self.Cl22[XY]),
+                            smoothing_window,
+                            smoothing_polyorder,
+                        ) - self.signal[XY])
                 elif noise_smoothing_mode == 'poly':
                     self.signal[XY] = self.smooth_and_interpolate(
                         np.arange(self.lmax + 1),
@@ -365,7 +367,8 @@ def compute_covmat(namap1, namap2, bins,
 
     my_cov = nacov(namap1, namap2, mc_11=mc_11, mc_12=mc_12, mc_22=mc_22,
                    signal=signal, noise=noise,
-                   smoothing_window=smoothing_window, smoothing_polyorder=smoothing_polyorder)
+                   smoothing_window=smoothing_window,
+                   smoothing_polyorder=smoothing_polyorder)
     my_cov.compute()
 
     return my_cov.covmat

@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='nawrapper',
       version='0.1',
@@ -7,5 +7,5 @@ setup(name='nawrapper',
       author='Zack Li',
       author_email='zequnl@astro.princeton.edu',
       license='MIT',
-      packages=['nawrapper'],
+      packages=find_packages(),
       zip_safe=False)

@@ -199,14 +199,16 @@ def get_cmb_sim_hp(signal, nside_out):
     ----------
     signal : dictionary
         dictionary containing spectra starting from ell=0 with keys
-        TT, EE, BB, TE, EB, TE.
+        TT, EE, BB, TE.
     nside_out : int
         output map resolution
     """
     cmb_sim = hp.synfast(
         cls=(
-            signal['TT'], signal['EE'], signal['BB'],
-            signal['TE'], signal['EB'], signal['TE']*0.0
+            signal['TT'],
+            signal['EE'],
+            signal['BB'],
+            signal['TE']
         ),
         nside=nside_out,
         pixwin=True, verbose=False, new=True
