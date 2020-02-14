@@ -78,7 +78,7 @@ def get_steve_apo(shape, wcs, width, N_cut=0):
     edges of the map to zero prior to filtering. This taper was written to
     match the output of Steve's power spectrum pipeline, for reproducibility.
 
-    See :py:func:`nawrapper.ps.kfilter_map`.
+    See :py:func:`nawrapper.maptools.kfilter_map`.
 
     Parameters
     ----------
