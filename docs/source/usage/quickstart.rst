@@ -102,7 +102,7 @@ For additional realism we generate noise power spectra to add to our
                                  nl[np.newaxis, np.newaxis])
 
 For this example, we won’t include a beam. Now we set up the
-:py:class:`nawrapper.ps.namap_car` objects, using as input our our original random
+:py:class:`nawrapper.power.namap_car` objects, using as input our our original random
 realization summed with the noise realizations.
 
 The Power Spectrum Part

@@ -12,8 +12,8 @@ in particular for the ACT experiment.
 .. figure:: _static/outline.svg
 
 It bundles all the necessary pieces associated with a map (i.e. beams, masks,
-filters) into a :py:class:`nawrapper.ps.namap_hp` (for HEALPix maps) or 
-:py:class:`nawrapper.ps.namap_car` (for rectangular pixels). It also provides 
+filters) into a :py:class:`nawrapper.power.namap_hp` (for HEALPix maps) or 
+:py:class:`nawrapper.power.namap_car` (for rectangular pixels). It also provides 
 concise utility functions for turning these into dictionaries of power spectra.
 
 

@@ -1,4 +1,9 @@
 language: python
+
+cache:
+  apt: true
+  pip: true
+
 python:
   # We don't actually use the Travis Python, but this keeps it organized.
   - "3.7"
@@ -7,9 +12,9 @@ install:
   # We do this conditionally because it saves us some downloading if the
   # version is the same.
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+    wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
     else
-      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
     fi
   - bash miniconda.sh -b -p $HOME/miniconda
   - source "$HOME/miniconda/etc/profile.d/conda.sh"
@@ -19,11 +24,11 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
 
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION nose sphinx pyyaml matplotlib cython numpy scipy astropy pillow
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION sphinx pyyaml matplotlib cython numpy astropy pillow
   - conda activate test-environment
   - conda install -c conda-forge cfitsio=3.430 libcblas gsl -n test-environment
   - conda install -c conda-forge namaster -n test-environment
-  - pip install healpy
+  - pip install nose healpy scipy
   - git clone https://github.com/simonsobs/pixell.git
   - cd pixell
   - python setup.py install --user
@@ -41,12 +46,12 @@ addons:
 script:
   - nosetests --with-coverage test/
   - if [[ "$TRAVIS_PYTHON_VERSION" != "2.7" ]]; then
-      travis-sphinx build;
+    travis-sphinx build;
     fi
 
 # Push the results back to codecov
 after_success:
   - codecov
   - if [[ "$TRAVIS_PYTHON_VERSION" != "2.7" ]]; then
-      travis-sphinx deploy;
+    travis-sphinx deploy;
     fi
