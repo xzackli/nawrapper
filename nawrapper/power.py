@@ -15,12 +15,11 @@ import errno
 
 # need this decorator to make this class abstract
 @six.add_metaclass(abc.ABCMeta)
-class abstract_namap():
+class abstract_namap:
     """Object for organizing map products."""
 
     @abc.abstractmethod
-    def __init__(self, maps, masks=None, beams=None,
-                 unpixwin=True, verbose=True):
+    def __init__(self, maps, masks=None, beams=None, unpixwin=True, verbose=True):
         r"""Generic abstract
 
         Objects which inherit from this will organize the various ingredients
@@ -55,7 +54,7 @@ class abstract_namap():
 
         # check the input to make sure nothing funny is happening. we want
         # input tuples! A tuple of three maps.
-        if hasattr(maps, '__len__'):
+        if hasattr(maps, "__len__"):
             if len(maps) == 3:
                 self.map_I, self.map_Q, self.map_U = maps
             elif type(maps) is enmap.ndmap and maps.ndim == 2:
@@ -67,16 +66,16 @@ class abstract_namap():
                     "Pass a tuple or list of maps, which needs to be of\n"
                     "length 3 (for IQU).\n"
                     "For T only, try setting maps=(i_map, None, None).\n If "
-                    "you wanted just pol maps, try maps=(None, q_map, u_map).")
+                    "you wanted just pol maps, try maps=(None, q_map, u_map)."
+                )
 
-        if (isinstance(self.map_I, enmap.ndmap) or
-                isinstance(self.map_Q, enmap.ndmap)):
-            self.mode = 'car'
+        if isinstance(self.map_I, enmap.ndmap) or isinstance(self.map_Q, enmap.ndmap):
+            self.mode = "car"
         else:
-            self.mode = 'healpix'
+            self.mode = "healpix"
 
         # a tuple of two masks
-        if hasattr(masks, '__len__'):
+        if hasattr(masks, "__len__"):
             if len(masks) == 2:
                 self.mask_temp, self.mask_pol = masks
             elif isinstance(masks, np.ndarray):
@@ -87,10 +86,9 @@ class abstract_namap():
             self.mask_temp, self.mask_pol = None, None
 
         # a tuple of two beams
-        if hasattr(beams, '__len__'):
+        if hasattr(beams, "__len__"):
             if len(beams) == 2:
-                self.beam_temp, self.beam_pol = beams[0].copy(
-                ), beams[1].copy()
+                self.beam_temp, self.beam_pol = beams[0].copy(), beams[1].copy()
             else:
                 if verbose:
                     print("Assuming the same beams for both I and QU.")
@@ -99,56 +97,62 @@ class abstract_namap():
             self.beam_temp, self.beam_pol = None, None  # we'll set to 1 later
 
         # remember which spectra to compute
-        self.has_temp = (self.map_I is not None)
+        self.has_temp = self.map_I is not None
         self.has_pol = (self.map_Q is not None) and (self.map_U is not None)
 
         if verbose:
-            print('Creating a %s namap. temperature: %s, polarization: %s' %
-                  (self.mode, self.has_temp, self.has_pol))
+            print(
+                "Creating a %s namap. temperature: %s, polarization: %s"
+                % (self.mode, self.has_temp, self.has_pol)
+            )
 
-        if ((self.map_Q is None and self.map_U is not None) or
-                (self.map_Q is not None and self.map_U is None)):
+        if (self.map_Q is None and self.map_U is not None) or (
+            self.map_Q is not None and self.map_U is None
+        ):
             raise ValueError("Q and U must both be specified for pol maps.")
-        if ((self.map_I is None) and
-                (self.map_U is None) and (self.map_Q is None)):
+        if (self.map_I is None) and (self.map_U is None) and (self.map_Q is None):
             raise ValueError("Must specify at least I or QU maps.")
 
         # set masks = 1 if not specified.
         if self.has_temp and self.mask_temp is None:
             self.mask_temp = self.map_I * 0.0 + 1.0
             if verbose:
-                print('temperature mask not specified, setting '
-                      'temperature mask to one.')
+                print(
+                    "temperature mask not specified, setting "
+                    "temperature mask to one."
+                )
         if self.has_pol and self.mask_pol is None:
             self.mask_pol = self.map_Q * 0.0 + 1.0
             if verbose:
-                print('polarization mask not specified, setting '
-                      'polarization mask to one.')
+                print(
+                    "polarization mask not specified, setting "
+                    "polarization mask to one."
+                )
 
-    def set_beam(self,
-                 apply_healpix_window=False, verbose=False):
+    def set_beam(self, apply_healpix_window=False, verbose=False):
         """Set and extend the object's beam up to lmax."""
         if self.has_temp:
             if self.beam_temp is None:
                 if verbose:
-                    print("temperature beam not specified, setting " +
-                          "temperature beam to 1.")
+                    print(
+                        "temperature beam not specified, setting "
+                        + "temperature beam to 1."
+                    )
                 beam_temp = np.ones(self.lmax_beam)
             else:
                 beam_temp = np.ones(max(self.lmax_beam, len(self.beam_temp)))
-                beam_temp[:len(self.beam_temp)] = self.beam_temp
-                beam_temp[len(self.beam_temp):] = self.beam_temp[-1]
+                beam_temp[: len(self.beam_temp)] = self.beam_temp
+                beam_temp[len(self.beam_temp) :] = self.beam_temp[-1]
             self.beam_temp = beam_temp
         if self.has_pol:
             if self.beam_pol is None:
                 if verbose:
-                    print("polarization beam not specified, setting " +
-                          "P beam to 1.")
+                    print("polarization beam not specified, setting " + "P beam to 1.")
                 beam_pol = np.ones(self.lmax_beam)
             else:
                 beam_pol = np.ones(max(self.lmax_beam, len(self.beam_pol)))
-                beam_pol[:len(self.beam_pol)] = self.beam_pol
-                beam_pol[len(self.beam_pol):] = self.beam_pol[-1]
+                beam_pol[: len(self.beam_pol)] = self.beam_pol
+                beam_pol[len(self.beam_pol) :] = self.beam_pol[-1]
             self.beam_pol = beam_pol
 
 
@@ -163,10 +167,22 @@ class namap_car(abstract_namap):
     will not change your results significantly.
     """
 
-    def __init__(self, maps, masks=None, beams=None,
-                 unpixwin=True, kx=0, ky=0, kspace_apo=40, legacy_steve=False,
-                 verbose=True, sub_shape=None, sub_wcs=None,
-                 purify_e=False, purify_b=False):
+    def __init__(
+        self,
+        maps,
+        masks=None,
+        beams=None,
+        unpixwin=True,
+        kx=0,
+        ky=0,
+        kspace_apo=40,
+        legacy_steve=False,
+        verbose=True,
+        sub_shape=None,
+        sub_wcs=None,
+        purify_e=False,
+        purify_b=False,
+    ):
         r"""Generate a CAR map container
 
         This bundles CAR pixelization map products, in particular
@@ -208,8 +224,8 @@ class namap_car(abstract_namap):
         """
 
         super(namap_car, self).__init__(
-            maps=maps, masks=masks, beams=beams,
-            unpixwin=unpixwin, verbose=verbose)
+            maps=maps, masks=masks, beams=beams, unpixwin=unpixwin, verbose=verbose
+        )
 
         self.shape = sub_shape
         self.wcs = sub_wcs
@@ -218,7 +234,7 @@ class namap_car(abstract_namap):
         if self.wcs is None:
             self.wcs = self.mask_temp.wcs
 
-        self.lmax_beam = int(180.0/abs(np.min(self.wcs.wcs.cdelt))) + 1
+        self.lmax_beam = int(180.0 / abs(np.min(self.wcs.wcs.cdelt))) + 1
         self.set_beam(verbose=verbose)
         self.legacy_steve = legacy_steve
         # needed to reproduce steve's spectra
@@ -229,41 +245,53 @@ class namap_car(abstract_namap):
                 self.map_Q.wcs.wcs.crpix += np.array([-1, -1])
                 self.map_U.wcs.wcs.crpix += np.array([-1, -1])
             if verbose:
-                print('Applying legacy_steve correction.')
+                print("Applying legacy_steve correction.")
 
-        self.extract_and_filter_CAR(kx, ky, kspace_apo,
-                                    legacy_steve, unpixwin, verbose=verbose)
+        self.extract_and_filter_CAR(
+            kx, ky, kspace_apo, legacy_steve, unpixwin, verbose=verbose
+        )
 
         if verbose:
             print("Computing spherical harmonics.\n")
         # construct the a_lm of the maps
         if self.has_temp:
             self.field_spin0 = nmt.NmtField(
-                self.mask_temp, [self.map_I],
-                beam=self.beam_temp, wcs=self.wcs, n_iter=0,
-                purify_e=purify_e, purify_b=purify_b)
+                self.mask_temp,
+                [self.map_I],
+                beam=self.beam_temp,
+                wcs=self.wcs,
+                n_iter=0,
+                purify_e=purify_e,
+                purify_b=purify_b,
+            )
         if self.has_pol:
             self.field_spin2 = nmt.NmtField(
-                self.mask_pol, [self.map_Q, self.map_U],
-                beam=self.beam_pol, wcs=self.wcs, n_iter=0,
-                purify_e=purify_e, purify_b=purify_b)
+                self.mask_pol,
+                [self.map_Q, self.map_U],
+                beam=self.beam_pol,
+                wcs=self.wcs,
+                n_iter=0,
+                purify_e=purify_e,
+                purify_b=purify_b,
+            )
 
-    def extract_and_filter_CAR(self, kx, ky, kspace_apo,
-                               legacy_steve, unpixwin, verbose=False):
+    def extract_and_filter_CAR(
+        self, kx, ky, kspace_apo, legacy_steve, unpixwin, verbose=False
+    ):
         """Extract and filter this initialized CAR namap.
 
         See constructor for parameters.
         """
         if verbose:
             print(
-                ('Applying a k-space filter (kx=%s, ky=%s' % (kx, ky)) +
-                ', apo=%s), unpixwin: %s' % (kspace_apo, unpixwin))
+                ("Applying a k-space filter (kx=%s, ky=%s" % (kx, ky))
+                + ", apo=%s), unpixwin: %s" % (kspace_apo, unpixwin)
+            )
 
         # extract to common shape and wcs
         if self.has_temp:
             self.map_I = enmap.extract(self.map_I, self.shape, self.wcs)
-            self.mask_temp = enmap.extract(
-                self.mask_temp, self.shape, self.wcs)
+            self.mask_temp = enmap.extract(self.mask_temp, self.shape, self.wcs)
 
         if self.has_pol:
             self.map_Q = enmap.extract(self.map_Q, self.shape, self.wcs)
@@ -276,24 +304,31 @@ class namap_car(abstract_namap):
         if self.has_temp:
             self.mask_temp *= apo  # multiply the apodized taper into your mask
             self.map_I = maptools.kfilter_map(
-                self.map_I, apo, kx, ky, unpixwin=unpixwin,
-                legacy_steve=legacy_steve)
+                self.map_I, apo, kx, ky, unpixwin=unpixwin, legacy_steve=legacy_steve
+            )
 
         if self.has_pol:
             self.mask_pol *= apo  # multiply the apodized taper into your mask
             self.map_Q = maptools.kfilter_map(
-                self.map_Q, apo, kx, ky, unpixwin=unpixwin,
-                legacy_steve=legacy_steve)
+                self.map_Q, apo, kx, ky, unpixwin=unpixwin, legacy_steve=legacy_steve
+            )
             self.map_U = maptools.kfilter_map(
-                self.map_U, apo, kx, ky, unpixwin=unpixwin,
-                legacy_steve=legacy_steve)
+                self.map_U, apo, kx, ky, unpixwin=unpixwin, legacy_steve=legacy_steve
+            )
 
 
 class namap_hp(abstract_namap):
-
-    def __init__(self, maps, masks=None, beams=None, unpixwin=True,
-                 verbose=True, n_iter=3,
-                 purify_e=False, purify_b=False):
+    def __init__(
+        self,
+        maps,
+        masks=None,
+        beams=None,
+        unpixwin=True,
+        verbose=True,
+        n_iter=3,
+        purify_e=False,
+        purify_b=False,
+    ):
         r"""Generate a healpix map container
 
         This bundles healpix pixelization map products, in particular
@@ -327,8 +362,8 @@ class namap_hp(abstract_namap):
         """
 
         super(namap_hp, self).__init__(
-            maps=maps, masks=masks, beams=beams,
-            unpixwin=unpixwin, verbose=verbose)
+            maps=maps, masks=masks, beams=beams, unpixwin=unpixwin, verbose=verbose
+        )
 
         if self.has_temp:
             self.nside = hp.npix2nside(len(self.map_I))
@@ -337,35 +372,41 @@ class namap_hp(abstract_namap):
 
         self.lmax_beam = 3 * self.nside
         self.set_beam(verbose=verbose)
-        self.pixwin_temp, self.pixwin_pol = hp.sphtfunc.pixwin(
-            self.nside, pol=True)
+        self.pixwin_temp, self.pixwin_pol = hp.sphtfunc.pixwin(self.nside, pol=True)
         if verbose:
             print("Including the healpix pixel window function.")
         if self.has_temp:
-            self.pixwin_temp = self.pixwin_temp[:len(self.beam_temp)]
+            self.pixwin_temp = self.pixwin_temp[: len(self.beam_temp)]
         if self.has_pol:
-            self.pixwin_pol = self.pixwin_pol[:len(self.beam_pol)]
+            self.pixwin_pol = self.pixwin_pol[: len(self.beam_pol)]
 
         # this is written so that the beam is kept separate from pixwin
         if self.has_temp:
-            beam_temp = self.beam_temp[:len(
-                self.pixwin_temp)] * self.pixwin_temp
+            beam_temp = self.beam_temp[: len(self.pixwin_temp)] * self.pixwin_temp
         if self.has_pol:
-            beam_pol = self.beam_pol[:len(self.pixwin_pol)] * self.pixwin_pol
+            beam_pol = self.beam_pol[: len(self.pixwin_pol)] * self.pixwin_pol
 
         # construct the a_lm of the maps, depending on what data is available
         if verbose:
             print("Computing spherical harmonics.\n")
         if self.has_temp:
             self.field_spin0 = nmt.NmtField(
-                self.mask_temp, [self.map_I],
-                beam=beam_temp, n_iter=n_iter,
-                purify_e=purify_e, purify_b=purify_b)
+                self.mask_temp,
+                [self.map_I],
+                beam=beam_temp,
+                n_iter=n_iter,
+                purify_e=purify_e,
+                purify_b=purify_b,
+            )
         if self.has_pol:
             self.field_spin2 = nmt.NmtField(
-                self.mask_pol, [self.map_Q, self.map_U],
-                beam=beam_pol, n_iter=n_iter,
-                purify_e=purify_e, purify_b=purify_b)
+                self.mask_pol,
+                [self.map_Q, self.map_U],
+                beam=beam_pol,
+                n_iter=n_iter,
+                purify_e=purify_e,
+                purify_b=purify_b,
+            )
 
 
 class mode_coupling:
@@ -378,8 +419,15 @@ class mode_coupling:
     data.
     """
 
-    def __init__(self, namap1=None, namap2=None, bins=None, mcm_dir=None,
-                 overwrite=False, verbose=True):
+    def __init__(
+        self,
+        namap1=None,
+        namap2=None,
+        bins=None,
+        mcm_dir=None,
+        overwrite=False,
+        verbose=True,
+    ):
         r"""
         Create a `mode_coupling` object.
 
@@ -404,8 +452,11 @@ class mode_coupling:
 
         self.mcm_dir = mcm_dir
 
-        if ((mcm_dir is not None) and (not overwrite) and
-                os.path.isfile(os.path.join(self.mcm_dir, 'mcm.json'))):
+        if (
+            (mcm_dir is not None)
+            and (not overwrite)
+            and os.path.isfile(os.path.join(self.mcm_dir, "mcm.json"))
+        ):
             if verbose:
                 print("Loading mode-coupling matrices from disk.")
             self.load_from_dir(mcm_dir)
@@ -417,8 +468,8 @@ class mode_coupling:
 
             if namap1.mode != namap2.mode:
                 raise ValueError(
-                    'pixel types m1:%s, m2:%s incompatible' %
-                    (namap1.mode, namap2.mode))
+                    "pixel types m1:%s, m2:%s incompatible" % (namap1.mode, namap2.mode)
+                )
 
             self.workspace_dict = {}
             self.w00, self.w02, self.w20, self.w22 = None, None, None, None
@@ -427,25 +478,29 @@ class mode_coupling:
             if namap1.has_temp and namap2.has_temp:
                 self.w00 = nmt.NmtWorkspace()
                 self.w00.compute_coupling_matrix(
-                    namap1.field_spin0, namap2.field_spin0, bins, n_iter=0)
+                    namap1.field_spin0, namap2.field_spin0, bins, n_iter=0
+                )
                 self.workspace_dict[(0, 0)] = self.w00
 
             if namap1.has_temp and namap2.has_pol:
                 self.w02 = nmt.NmtWorkspace()
                 self.w02.compute_coupling_matrix(
-                    namap1.field_spin0, namap2.field_spin2, bins, n_iter=0)
+                    namap1.field_spin0, namap2.field_spin2, bins, n_iter=0
+                )
                 self.workspace_dict[(0, 2)] = self.w02
 
             if namap1.has_pol and namap2.has_temp:
                 self.w20 = nmt.NmtWorkspace()
                 self.w20.compute_coupling_matrix(
-                    namap1.field_spin2, namap2.field_spin0, bins, n_iter=0)
+                    namap1.field_spin2, namap2.field_spin0, bins, n_iter=0
+                )
                 self.workspace_dict[(2, 0)] = self.w20
 
             if namap1.has_pol and namap2.has_pol:
                 self.w22 = nmt.NmtWorkspace()
                 self.w22.compute_coupling_matrix(
-                    namap1.field_spin2, namap2.field_spin2, bins, n_iter=0)
+                    namap1.field_spin2, namap2.field_spin2, bins, n_iter=0
+                )
                 self.workspace_dict[(2, 2)] = self.w22
 
             if self.mcm_dir is not None:
@@ -455,35 +510,35 @@ class mode_coupling:
 
     def load_from_dir(self, mcm_dir):
         """Read information from a nawrapper mode coupling directory."""
-        with open(os.path.join(mcm_dir, 'mcm.json'), 'r') as read_file:
-            data = (json.load(read_file))
+        with open(os.path.join(mcm_dir, "mcm.json"), "r") as read_file:
+            data = json.load(read_file)
 
             # convert lists into numpy arrays
-            for bk in ['ells', 'bpws', 'weights']:
-                data['bin_kwargs'][bk] = np.array(data['bin_kwargs'][bk])
-            self.bins = nabin(**data['bin_kwargs'])
+            for bk in ["ells", "bpws", "weights"]:
+                data["bin_kwargs"][bk] = np.array(data["bin_kwargs"][bk])
+            self.bins = nabin(**data["bin_kwargs"])
             self.lb = self.bins.get_effective_ells()
 
             self.workspace_dict = {}
 
-            if 'w00' in data:
+            if "w00" in data:
                 self.w00 = nmt.NmtWorkspace()
-                self.w00.read_from(os.path.join(mcm_dir, data['w00']))
+                self.w00.read_from(os.path.join(mcm_dir, data["w00"]))
                 self.workspace_dict[(0, 0)] = self.w00
 
-            if 'w02' in data:
+            if "w02" in data:
                 self.w02 = nmt.NmtWorkspace()
-                self.w02.read_from(os.path.join(mcm_dir, data['w02']))
+                self.w02.read_from(os.path.join(mcm_dir, data["w02"]))
                 self.workspace_dict[(0, 2)] = self.w02
 
-            if 'w20' in data:
+            if "w20" in data:
                 self.w20 = nmt.NmtWorkspace()
-                self.w20.read_from(os.path.join(mcm_dir, data['w20']))
+                self.w20.read_from(os.path.join(mcm_dir, data["w20"]))
                 self.workspace_dict[(2, 0)] = self.w20
 
-            if 'w22' in data:
+            if "w22" in data:
                 self.w22 = nmt.NmtWorkspace()
-                self.w22.read_from(os.path.join(mcm_dir, data['w22']))
+                self.w22.read_from(os.path.join(mcm_dir, data["w22"]))
                 self.workspace_dict[(2, 2)] = self.w22
 
     def write_to_dir(self, mcm_dir):
@@ -492,8 +547,8 @@ class mode_coupling:
 
         # extract bin kwargs
         lmax = self.bins.lmax
-        bpws = -np.ones(lmax+1).astype(int)
-        weights = np.ones(lmax+1)
+        bpws = -np.ones(lmax + 1).astype(int)
+        weights = np.ones(lmax + 1)
         l_eff = self.bins.get_effective_ells()
         for i in range(len(l_eff)):
             bpws[self.bins.get_ell_list(i)] = i
@@ -504,30 +559,30 @@ class mode_coupling:
 
         # write binaries
         if self.w00 is not None:
-            data.update({'w00': 'w00.bin'})
-            self.w00.write_to(os.path.join(mcm_dir, data['w00']))
+            data.update({"w00": "w00.bin"})
+            self.w00.write_to(os.path.join(mcm_dir, data["w00"]))
 
         if self.w02 is not None:
-            data.update({'w02': 'w02.bin'})
-            self.w02.write_to(os.path.join(mcm_dir, data['w02']))
+            data.update({"w02": "w02.bin"})
+            self.w02.write_to(os.path.join(mcm_dir, data["w02"]))
 
         if self.w20 is not None:
-            data.update({'w20': 'w20.bin'})
-            self.w20.write_to(os.path.join(mcm_dir, data['w20']))
+            data.update({"w20": "w20.bin"})
+            self.w20.write_to(os.path.join(mcm_dir, data["w20"]))
 
         if self.w22 is not None:
-            data.update({'w22': 'w22.bin'})
-            self.w22.write_to(os.path.join(mcm_dir, data['w22']))
+            data.update({"w22": "w22.bin"})
+            self.w22.write_to(os.path.join(mcm_dir, data["w22"]))
 
         # write bin kwargs
-        data['bin_kwargs'] = {
-            'lmax': lmax,
-            'ells': np.arange(lmax+1).tolist(),
-            'bpws': bpws.tolist(),
-            'weights': weights.tolist()
+        data["bin_kwargs"] = {
+            "lmax": lmax,
+            "ells": np.arange(lmax + 1).tolist(),
+            "bpws": bpws.tolist(),
+            "weights": weights.tolist(),
         }
 
-        with open(os.path.join(mcm_dir, 'mcm.json'), 'w') as write_file:
+        with open(os.path.join(mcm_dir, "mcm.json"), "w") as write_file:
             json.dump(data, write_file)
 
     def compute_master(self, f_a, f_b, wsp):
@@ -579,47 +634,55 @@ def read_beam(beam_file):
     beam_t = np.loadtxt(beam_file)
     max_beam_l = np.max(beam_t[:, 0].astype(int))
     beam_data = np.zeros(max_beam_l)
-    beam_data = np.interp(np.arange(max_beam_l),
-                          fp=beam_t[:, 1].astype(float), xp=beam_t[:, 0])
+    beam_data = np.interp(
+        np.arange(max_beam_l), fp=beam_t[:, 1].astype(float), xp=beam_t[:, 0]
+    )
     return beam_data
 
 
 class nabin(nmt.NmtBin):
-
-    def __init__(self, lmax, bpws=None, ells=None, weights=None,
-                 nlb=None, is_Dell=False, f_ell=None):
+    def __init__(
+        self,
+        lmax,
+        bpws=None,
+        ells=None,
+        weights=None,
+        nlb=None,
+        is_Dell=False,
+        f_ell=None,
+    ):
 
         # remember a dictionary so we can turn this into a JSON later
         self.init_dict = {
-            'lmax': lmax,
-            'bpws': bpws,
-            'ells': ells,
-            'weights': weights,
-            'nlb': nlb,
-            'is_Dell': is_Dell,
-            'f_ell': f_ell
+            "lmax": lmax,
+            "bpws": bpws,
+            "ells": ells,
+            "weights": weights,
+            "nlb": nlb,
+            "is_Dell": is_Dell,
+            "f_ell": f_ell,
         }
         # can't json a numpy array
-        for array_key in ('bpws', 'ells', 'weights', 'f_ell'):
+        for array_key in ("bpws", "ells", "weights", "f_ell"):
             if isinstance(self.init_dict[array_key], np.ndarray):
                 self.init_dict[array_key] = self.init_dict[array_key].tolist()
 
-        if (bpws is None) and (ells is None) and (weights is None) \
-           and (nlb is None):
-            raise KeyError("Must supply bandpower arrays or constant "
-                           "bandpower width")
+        if (bpws is None) and (ells is None) and (weights is None) and (nlb is None):
+            raise KeyError(
+                "Must supply bandpower arrays or constant " "bandpower width"
+            )
 
         if nlb is None:
             if (bpws is None) or (ells is None) or (weights is None):
                 raise KeyError("Must provide bpws, ells and weights")
             if f_ell is None:
                 if is_Dell:
-                    f_ell = ells * (ells + 1.) / (2 * np.pi)
+                    f_ell = ells * (ells + 1.0) / (2 * np.pi)
                 else:
                     f_ell = np.ones(len(ells))
-            self.bin = lib.bins_create_py(bpws.astype(np.int32),
-                                          ells.astype(np.int32),
-                                          weights, f_ell, int(lmax))
+            self.bin = lib.bins_create_py(
+                bpws.astype(np.int32), ells.astype(np.int32), weights, f_ell, int(lmax)
+            )
         else:
             self.bin = lib.bins_constant(nlb, lmax, int(is_Dell))
         self.lmax = lmax
@@ -651,17 +714,20 @@ def read_bins(file, lmax=7925, is_Dell=False):
 
     """
     binleft, binright, bincenter = np.loadtxt(
-        file, unpack=True,
-        dtype={'names': ('binleft', 'binright', 'bincenter'),
-               'formats': ('i', 'i', 'f')})
+        file,
+        unpack=True,
+        dtype={
+            "names": ("binleft", "binright", "bincenter"),
+            "formats": ("i", "i", "f"),
+        },
+    )
     ells = np.arange(lmax)
     bpws = -1 + np.zeros_like(ells)  # Array of bandpower indices
     for i, (bl, br) in enumerate(zip(binleft[1:], binright[1:])):
-        bpws[bl:br+1] = i
+        bpws[bl : br + 1] = i
 
     weights = np.array([1.0 / np.sum(bpws == bpws[l]) for l in range(lmax)])
-    b = nabin(lmax=lmax, bpws=bpws, ells=ells, weights=weights,
-              is_Dell=is_Dell)
+    b = nabin(lmax=lmax, bpws=bpws, ells=ells, weights=weights, is_Dell=is_Dell)
     return b
 
 
@@ -669,19 +735,20 @@ def create_binning(lmax, lmin=2, widths=1, weight_function=None):
     """Create a nabin object conveniently."""
 
     # if widths is an integer, create a constant
-    ells = np.arange(lmax+1).astype(int)
+    ells = np.arange(lmax + 1).astype(int)
     bpws = -np.ones_like(ells).astype(int)  # Array of bandpower indices
 
-    if not hasattr(widths, '__len__'):
+    if not hasattr(widths, "__len__"):
         # we have an array of lengths!
-        widths_list = [widths for i in
-                       range(np.ceil((lmax-lmin)/widths).astype(int)+1)]
+        widths_list = [
+            widths for i in range(np.ceil((lmax - lmin) / widths).astype(int) + 1)
+        ]
         widths = widths_list
 
     bin_left = lmin
     bin_num = 0
     for bin_num, w in enumerate(widths):
-        bpws[bin_left:bin_left+w] = bin_num
+        bpws[bin_left : bin_left + w] = bin_num
         bin_left += w
 
     if weight_function is None:
@@ -689,30 +756,30 @@ def create_binning(lmax, lmin=2, widths=1, weight_function=None):
     else:
         weights = [weight_function(l) for l in ells]
 
-    b = nabin(
-        lmax=lmax, bpws=bpws, ells=ells,
-        weights=weights, is_Dell=False)
+    b = nabin(lmax=lmax, bpws=bpws, ells=ells, weights=weights, is_Dell=False)
     return b
 
 
 def bin_spec_dict(Cb, binleft, binright, lmax):
     """Bin an unbinned spectra dictionary with a specified l^2 binning."""
-    ell_sub_list = [np.arange(l, r) for (l, r) in zip(binleft, binright+1)]
+    ell_sub_list = [np.arange(l, r) for (l, r) in zip(binleft, binright + 1)]
     lb = np.array([np.sum(ell_sub) / len(ell_sub) for ell_sub in ell_sub_list])
 
     result = {}
     for spec_key in Cb:
-        ell_sub_list = [np.arange(l, r) for (l, r) in zip(binleft, binright+1)]
-        lb = np.array([np.sum(ell_sub) / len(ell_sub)
-                       for ell_sub in ell_sub_list])
+        ell_sub_list = [np.arange(l, r) for (l, r) in zip(binleft, binright + 1)]
+        lb = np.array([np.sum(ell_sub) / len(ell_sub) for ell_sub in ell_sub_list])
         cl_from_zero = np.zeros(lmax + 1)
-        cl_from_zero[Cb['ell'].astype(int)] = Cb[spec_key]
+        cl_from_zero[Cb["ell"].astype(int)] = Cb[spec_key]
         weights = np.arange(lmax + 1) * (np.arange(lmax + 1) + 1)
         result[spec_key] = np.array(
-            [np.sum((weights * cl_from_zero)[ell_sub]) /
-             np.sum(weights[ell_sub]) for ell_sub in ell_sub_list])
+            [
+                np.sum((weights * cl_from_zero)[ell_sub]) / np.sum(weights[ell_sub])
+                for ell_sub in ell_sub_list
+            ]
+        )
 
-    result['ell'] = lb
+    result["ell"] = lb
     return result
 
 
@@ -727,8 +794,7 @@ def mkdir_p(path):
             raise
 
 
-def compute_spectra(namap1, namap2,
-                    bins=None, mc=None, lmax=None, verbose=True):
+def compute_spectra(namap1, namap2, bins=None, mc=None, lmax=None, verbose=True):
     r"""Compute all of the spectra between two maps.
 
     This computes all cross spectra between two
@@ -765,8 +831,8 @@ def compute_spectra(namap1, namap2,
 
     if (bins is None) and (mc is None) and (lmax is None):
         raise ValueError(
-            "You must specify either a binning, lmax, "
-            "or a mode coupling object.")
+            "You must specify either a binning, lmax, " "or a mode coupling object."
+        )
 
     if (lmax is not None) and (bins is None) and (mc is None):
         if verbose:
@@ -779,34 +845,31 @@ def compute_spectra(namap1, namap2,
     # compute the TEB spectra as appropriate
     Cb = {}
     if namap1.has_temp and namap2.has_temp:
-        Cb['TT'] = mc.compute_master(
-            namap1.field_spin0, namap2.field_spin0, mc.w00)[0]
+        Cb["TT"] = mc.compute_master(namap1.field_spin0, namap2.field_spin0, mc.w00)[0]
     if namap1.has_temp and namap2.has_pol:
-        spin1 = mc.compute_master(
-            namap1.field_spin0, namap2.field_spin2, mc.w02)
-        Cb['TE'] = spin1[0]
-        Cb['TB'] = spin1[1]
+        spin1 = mc.compute_master(namap1.field_spin0, namap2.field_spin2, mc.w02)
+        Cb["TE"] = spin1[0]
+        Cb["TB"] = spin1[1]
     if namap1.has_pol and namap2.has_temp:
-        spin1 = mc.compute_master(
-            namap1.field_spin2, namap2.field_spin0, mc.w20)
-        Cb['ET'] = spin1[0]
-        Cb['BT'] = spin1[1]
+        spin1 = mc.compute_master(namap1.field_spin2, namap2.field_spin0, mc.w20)
+        Cb["ET"] = spin1[0]
+        Cb["BT"] = spin1[1]
     if namap1.has_pol and namap2.has_pol:
-        spin2 = mc.compute_master(
-            namap1.field_spin2, namap2.field_spin2, mc.w22)
-        Cb['EE'] = spin2[0]
-        Cb['EB'] = spin2[1]
-        Cb['BE'] = spin2[2]
-        Cb['BB'] = spin2[3]
+        spin2 = mc.compute_master(namap1.field_spin2, namap2.field_spin2, mc.w22)
+        Cb["EE"] = spin2[0]
+        Cb["EB"] = spin2[1]
+        Cb["BE"] = spin2[2]
+        Cb["BB"] = spin2[3]
 
-    Cb['ell'] = mc.lb
+    Cb["ell"] = mc.lb
     return Cb
 
 
 def util_bin_FFTspec_CAR(data, modlmap, bin_edges):
     digitized = np.digitize(np.ndarray.flatten(modlmap), bin_edges, right=True)
-    return np.bincount(
-        digitized, (data).reshape(-1))[1:-1]/np.bincount(digitized)[1:-1]
+    return (
+        np.bincount(digitized, (data).reshape(-1))[1:-1] / np.bincount(digitized)[1:-1]
+    )
 
 
 def util_bin_FFT_CAR(map1, map2, mask, beam1, beam2, lmax=8000):
@@ -817,15 +880,15 @@ def util_bin_FFT_CAR(map1, map2, mask, beam1, beam2, lmax=8000):
     """
     # beam_ells = np.arange(lmax+1)
 
-    kmap1 = enmap.fft(map1*mask, normalize="phys")
-    kmap2 = enmap.fft(map2*mask, normalize="phys")
-    power = (kmap1*np.conj(kmap2)).real
+    kmap1 = enmap.fft(map1 * mask, normalize="phys")
+    kmap2 = enmap.fft(map2 * mask, normalize="phys")
+    power = (kmap1 * np.conj(kmap2)).real
 
     bin_edges = np.arange(0, lmax, 40)
-    centers = (bin_edges[1:] + bin_edges[:-1])/2.
-    w2 = np.mean(mask**2.)
+    centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+    w2 = np.mean(mask ** 2.0)
     modlmap = enmap.modlmap(map1.shape, map1.wcs)
-    binned_power = util_bin_FFTspec_CAR(power/w2, modlmap, bin_edges)
+    binned_power = util_bin_FFTspec_CAR(power / w2, modlmap, bin_edges)
     binned_power *= beam1[centers.astype(int)]
     binned_power *= beam2[centers.astype(int)]
     return centers, binned_power

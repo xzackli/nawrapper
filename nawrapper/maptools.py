@@ -50,12 +50,12 @@ def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
 
     if unpixwin:  # remove pixel window in Fourier space
         wy, wx = enmap.calc_window(m.shape)
-        alm /= (wy[:, np.newaxis])
-        alm /= (wx[np.newaxis, :])
+        alm /= wy[:, np.newaxis]
+        alm /= wx[np.newaxis, :]
 
     ly, lx = enmap.lmap(alm.shape, alm.wcs)
-    kfilter_x = (np.abs(lx) >= kx_cut)
-    kfilter_y = (np.abs(ly) >= ky_cut)
+    kfilter_x = np.abs(lx) >= kx_cut
+    kfilter_y = np.abs(ly) >= ky_cut
 
     if legacy_steve:  # Steve's kspace filter appears to do this
         cut_x_k = np.unique(lx[(np.abs(lx) <= kx_cut)])
@@ -64,8 +64,7 @@ def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
         kfilter_x[np.isclose(lx, cut_x_k[0])] = True
         kfilter_y[np.isclose(ly, cut_y_k[-1])] = True
 
-    result = enmap.ifft(alm * kfilter_x * kfilter_y,
-                        normalize=True).real
+    result = enmap.ifft(alm * kfilter_x * kfilter_y, normalize=True).real
     result[apo > 0.0] = result[apo > 0.0] / apo[apo > 0.0]
     return result
 
@@ -100,9 +99,10 @@ def get_steve_apo(shape, wcs, width, N_cut=0):
     """
     apo = enmap.ones(shape, wcs=wcs)
     apo_i = np.arange(width)
-    apo_profile = 1-(-np.sin(2.0*np.pi*(width-apo_i) /
-                             (width-N_cut))/(2.0*np.pi)
-                     + (width-apo_i)/(width-N_cut))
+    apo_profile = 1 - (
+        -np.sin(2.0 * np.pi * (width - apo_i) / (width - N_cut)) / (2.0 * np.pi)
+        + (width - apo_i) / (width - N_cut)
+    )
 
     # set it up for x and y edges
     apo[:width, :] *= apo_profile[:, np.newaxis]
@@ -129,9 +129,9 @@ def get_distance(input_mask):
         location in the input_mask.
 
     """
-    pixSize_arcmin = np.sqrt(input_mask.pixsize()*(60*180/np.pi)**2)
+    pixSize_arcmin = np.sqrt(input_mask.pixsize() * (60 * 180 / np.pi) ** 2)
     dist = scipy.ndimage.distance_transform_edt(np.asarray(input_mask))
-    dist *= pixSize_arcmin/60
+    dist *= pixSize_arcmin / 60
     return dist
 
 
@@ -163,20 +163,19 @@ def apod_C2(input_mask, radius):
     else:
         dist = get_distance(input_mask)
         id = np.where(dist > radius)
-        win = dist/radius-np.sin(2*np.pi*dist/radius)/(2*np.pi)
+        win = dist / radius - np.sin(2 * np.pi * dist / radius) / (2 * np.pi)
         win[id] = 1
 
     return enmap.ndmap(win, input_mask.wcs)
 
 
-def sub_mono_di(map_in, mask_in, nside,
-                sub_dipole=True, verbose=False):
+def sub_mono_di(map_in, mask_in, nside, sub_dipole=True, verbose=False):
     """Subtract monopole and dipole from a healpix map."""
     map_masked = hp.ma(map_in)
-    map_masked.mask = (mask_in < 1)
+    map_masked.mask = mask_in < 1
     mono, dipole = hp.pixelfunc.fit_dipole(map_masked)
     if verbose:
-        print('mono:', mono, ', dipole:', dipole)
+        print("mono:", mono, ", dipole:", dipole)
     m = map_in.copy()
     npix = hp.nside2npix(nside)
     bunchsize = npix // 24
@@ -204,13 +203,10 @@ def get_cmb_sim_hp(signal, nside_out):
         output map resolution
     """
     cmb_sim = hp.synfast(
-        cls=(
-            signal['TT'],
-            signal['EE'],
-            signal['BB'],
-            signal['TE']
-        ),
+        cls=(signal["TT"], signal["EE"], signal["BB"], signal["TE"]),
         nside=nside_out,
-        pixwin=True, verbose=False, new=True
+        pixwin=True,
+        verbose=False,
+        new=True,
     )
     return cmb_sim

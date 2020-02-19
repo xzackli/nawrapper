@@ -4,6 +4,7 @@ from scipy.signal import savgol_filter
 from collections import defaultdict
 import pymaster as nmt
 import nawrapper.power as power
+
 # import nawrapper.maptools as maptools
 # import healpy as hp
 # from pixell import enmap
@@ -32,10 +33,10 @@ class nacov:
         mc_22,
         signal=None,
         noise=None,
-        noise_smoothing_mode='savgol',
+        noise_smoothing_mode="savgol",
         smoothing_window=11,
         smoothing_polyorder=3,
-        cosmic_variance=True
+        cosmic_variance=True,
     ):
         r"""
         Create a `nacov` object.
@@ -71,7 +72,7 @@ class nacov:
             self.signal = signal
             # process keys in signal, cutting at lmax
             for k in self.signal:
-                self.signal[k] = self.signal[k][:self.lmax+1]
+                self.signal[k] = self.signal[k][: self.lmax + 1]
 
         if noise is None:
             self.noise = {}
@@ -100,32 +101,35 @@ class nacov:
 
             if (X + "1" + Y + "1") not in self.noise:
 
-                if noise_smoothing_mode == 'savgol':
+                if noise_smoothing_mode == "savgol":
                     self.noise[X + "1" + Y + "1"] = np.abs(
                         self.smooth_and_interpolate(
                             np.arange(self.lmax + 1),
                             self.bins.unbin_cell(self.Cl11[XY]),
                             smoothing_window,
                             smoothing_polyorder,
-                        ) - self.signal[XY])
-                elif noise_smoothing_mode == 'poly':
-                    self.noise[X + "1" + Y + "1"] = (
-                        self.get_smooth_noise(
-                            cb=self.Cl11[XY],
-                            signal=self.signal[XY],
-                            smoothing_polyorder=smoothing_polyorder)
+                        )
+                        - self.signal[XY]
+                    )
+                elif noise_smoothing_mode == "poly":
+                    self.noise[X + "1" + Y + "1"] = self.get_smooth_noise(
+                        cb=self.Cl11[XY],
+                        signal=self.signal[XY],
+                        smoothing_polyorder=smoothing_polyorder,
                     )
 
             if (X + "2" + Y + "2") not in self.noise:
-                if noise_smoothing_mode == 'savgol':
+                if noise_smoothing_mode == "savgol":
                     self.noise[X + "2" + Y + "2"] = np.abs(
                         self.smooth_and_interpolate(
                             np.arange(self.lmax + 1),
                             self.bins.unbin_cell(self.Cl22[XY]),
                             smoothing_window,
                             smoothing_polyorder,
-                        ) - self.signal[XY])
-                elif noise_smoothing_mode == 'poly':
+                        )
+                        - self.signal[XY]
+                    )
+                elif noise_smoothing_mode == "poly":
                     self.signal[XY] = self.smooth_and_interpolate(
                         np.arange(self.lmax + 1),
                         self.bins.unbin_cell(self.Cl12[XY]),
@@ -139,30 +143,24 @@ class nacov:
 
         self.beam = {}
         self.beam["T1"] = (
-            namap1.beam_temp[: self.lmax + 1] *
-            namap1.pixwin_temp[: self.lmax + 1]
+            namap1.beam_temp[: self.lmax + 1] * namap1.pixwin_temp[: self.lmax + 1]
         )
         self.beam["T2"] = (
-            namap2.beam_temp[: self.lmax + 1] *
-            namap2.pixwin_temp[: self.lmax + 1]
+            namap2.beam_temp[: self.lmax + 1] * namap2.pixwin_temp[: self.lmax + 1]
         )
         self.beam["E1"] = (
-            namap1.beam_pol[: self.lmax + 1] *
-            namap1.pixwin_pol[: self.lmax + 1]
+            namap1.beam_pol[: self.lmax + 1] * namap1.pixwin_pol[: self.lmax + 1]
         )
         self.beam["E2"] = (
-            namap2.beam_pol[: self.lmax + 1] *
-            namap2.pixwin_pol[: self.lmax + 1]
+            namap2.beam_pol[: self.lmax + 1] * namap2.pixwin_pol[: self.lmax + 1]
         )
 
         # currently no difference between E and B beam
         self.beam["B1"] = (
-            namap1.beam_pol[: self.lmax + 1] *
-            namap1.pixwin_pol[: self.lmax + 1]
+            namap1.beam_pol[: self.lmax + 1] * namap1.pixwin_pol[: self.lmax + 1]
         )
         self.beam["B2"] = (
-            namap2.beam_pol[: self.lmax + 1] *
-            namap2.pixwin_pol[: self.lmax + 1]
+            namap2.beam_pol[: self.lmax + 1] * namap2.pixwin_pol[: self.lmax + 1]
         )
 
         # for iterating over the output.
@@ -186,11 +184,17 @@ class nacov:
     def total_spec(self, XY, m1, m2):
         X, Y = XY
         if self.cosmic_variance:
-            return ((self.signal[XY] + self.noise[X + str(m1) + Y + str(m2)]) *
-                    self.beam[X + str(m1)] * self.beam[Y + str(m2)])
+            return (
+                (self.signal[XY] + self.noise[X + str(m1) + Y + str(m2)])
+                * self.beam[X + str(m1)]
+                * self.beam[Y + str(m2)]
+            )
         else:
-            return ((self.noise[X + str(m1) + Y + str(m2)]) *
-                    self.beam[X + str(m1)] * self.beam[Y + str(m2)])
+            return (
+                (self.noise[X + str(m1) + Y + str(m2)])
+                * self.beam[X + str(m1)]
+                * self.beam[Y + str(m2)]
+            )
 
     def cl_inputs(self, s1, s2, m1, m2):
         return [self.total_spec(XY, m1, m2) for XY in self.ordering[(s1, s2)]]
@@ -238,8 +242,7 @@ class nacov:
             a2b2,
             self.mc_12.workspace_dict[(spins[0], spins[1])],
             wb=self.mc_12.workspace_dict[(spins[2], spins[3])],
-        ).reshape([self.num_ell, len(ordering_a),
-                   self.num_ell, len(ordering_b)])
+        ).reshape([self.num_ell, len(ordering_a), self.num_ell, len(ordering_b)])
 
         for i, AB in enumerate(ordering_a):
             for j, CD in enumerate(ordering_b):
@@ -271,22 +274,23 @@ class nacov:
                             print(a, b, c, d)
                         self.compute_subcovmat(spins=(a, b, c, d))
 
-    def get_smooth_noise(self, cb, signal,
-                         smoothing_polyorder):
+    def get_smooth_noise(self, cb, signal, smoothing_polyorder):
         diff = np.abs(cb - self.bins.bin_cell(signal))
         poly = np.poly1d(
-            np.polyfit(self.lb,
-                       np.log(diff),
-                       w=1 / np.log(np.sqrt(2 / (2 * self.lb + 1)) * diff),
-                       deg=smoothing_polyorder))
+            np.polyfit(
+                self.lb,
+                np.log(diff),
+                w=1 / np.log(np.sqrt(2 / (2 * self.lb + 1)) * diff),
+                deg=smoothing_polyorder,
+            )
+        )
         return np.exp(poly(np.arange(self.lmax + 1)))
 
     """Smooth and interpolate a spectrum up to lmax.
     The goal of this is to produce a smooth theory curve for use in covariance.
     """
 
-    def smooth_and_interpolate(self, lb, cb, smoothing_window,
-                               smoothing_polyorder):
+    def smooth_and_interpolate(self, lb, cb, smoothing_window, smoothing_polyorder):
         return np.interp(
             x=np.arange(self.lmax + 1),
             xp=lb,
@@ -295,14 +299,20 @@ class nacov:
         )
 
 
-def compute_covmat(namap1, namap2, bins,
-                   mc_11=None, mc_12=None, mc_22=None,
-                   signal=None,
-                   noise=None,
-                   smoothing_window=11,
-                   smoothing_polyorder=3,
-                   cosmic_variance=True,
-                   verbose=True):
+def compute_covmat(
+    namap1,
+    namap2,
+    bins,
+    mc_11=None,
+    mc_12=None,
+    mc_22=None,
+    signal=None,
+    noise=None,
+    smoothing_window=11,
+    smoothing_polyorder=3,
+    cosmic_variance=True,
+    verbose=True,
+):
     r"""Compute all of the relevant covariances between two namap.
 
     This computes all covarainces between two
@@ -365,10 +375,17 @@ def compute_covmat(namap1, namap2, bins,
     if mc_22 is None:
         mc_22 = power.mode_coupling(namap2, namap2, bins=bins, verbose=False)
 
-    my_cov = nacov(namap1, namap2, mc_11=mc_11, mc_12=mc_12, mc_22=mc_22,
-                   signal=signal, noise=noise,
-                   smoothing_window=smoothing_window,
-                   smoothing_polyorder=smoothing_polyorder)
+    my_cov = nacov(
+        namap1,
+        namap2,
+        mc_11=mc_11,
+        mc_12=mc_12,
+        mc_22=mc_22,
+        signal=signal,
+        noise=noise,
+        smoothing_window=smoothing_window,
+        smoothing_polyorder=smoothing_polyorder,
+    )
     my_cov.compute()
 
     return my_cov.covmat
