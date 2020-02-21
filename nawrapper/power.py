@@ -172,11 +172,6 @@ class namap_car(abstract_namap):
         maps,
         masks=None,
         beams=None,
-        unpixwin=True,
-        kx=0,
-        ky=0,
-        kspace_apo=40,
-        legacy_steve=False,
         verbose=True,
         sub_shape=None,
         sub_wcs=None,
@@ -224,7 +219,7 @@ class namap_car(abstract_namap):
         """
 
         super(namap_car, self).__init__(
-            maps=maps, masks=masks, beams=beams, unpixwin=unpixwin, verbose=verbose
+            maps=maps, masks=masks, beams=beams, verbose=verbose
         )
 
         self.shape = sub_shape
@@ -236,20 +231,6 @@ class namap_car(abstract_namap):
 
         self.lmax_beam = int(180.0 / abs(np.min(self.wcs.wcs.cdelt))) + 1
         self.set_beam(verbose=verbose)
-        self.legacy_steve = legacy_steve
-        # needed to reproduce steve's spectra
-        if legacy_steve:
-            if self.has_temp:
-                self.map_I.wcs.wcs.crpix += np.array([-1, -1])
-            if self.has_pol:
-                self.map_Q.wcs.wcs.crpix += np.array([-1, -1])
-                self.map_U.wcs.wcs.crpix += np.array([-1, -1])
-            if verbose:
-                print("Applying legacy_steve correction.")
-
-        self.extract_and_filter_CAR(
-            kx, ky, kspace_apo, legacy_steve, unpixwin, verbose=verbose
-        )
 
         if verbose:
             print("Computing spherical harmonics.\n")
@@ -273,47 +254,6 @@ class namap_car(abstract_namap):
                 n_iter=0,
                 purify_e=purify_e,
                 purify_b=purify_b,
-            )
-
-    def extract_and_filter_CAR(
-        self, kx, ky, kspace_apo, legacy_steve, unpixwin, verbose=False
-    ):
-        """Extract and filter this initialized CAR namap.
-
-        See constructor for parameters.
-        """
-        if verbose:
-            print(
-                ("Applying a k-space filter (kx=%s, ky=%s" % (kx, ky))
-                + ", apo=%s), unpixwin: %s" % (kspace_apo, unpixwin)
-            )
-
-        # extract to common shape and wcs
-        if self.has_temp:
-            self.map_I = enmap.extract(self.map_I, self.shape, self.wcs)
-            self.mask_temp = enmap.extract(self.mask_temp, self.shape, self.wcs)
-
-        if self.has_pol:
-            self.map_Q = enmap.extract(self.map_Q, self.shape, self.wcs)
-            self.map_U = enmap.extract(self.map_U, self.shape, self.wcs)
-            self.mask_pol = enmap.extract(self.mask_pol, self.shape, self.wcs)
-
-        apo = maptools.get_steve_apo(self.shape, self.wcs, kspace_apo)
-
-        # k-space filter step (also correct for pixel window here!)
-        if self.has_temp:
-            self.mask_temp *= apo  # multiply the apodized taper into your mask
-            self.map_I = maptools.kfilter_map(
-                self.map_I, apo, kx, ky, unpixwin=unpixwin, legacy_steve=legacy_steve
-            )
-
-        if self.has_pol:
-            self.mask_pol *= apo  # multiply the apodized taper into your mask
-            self.map_Q = maptools.kfilter_map(
-                self.map_Q, apo, kx, ky, unpixwin=unpixwin, legacy_steve=legacy_steve
-            )
-            self.map_U = maptools.kfilter_map(
-                self.map_U, apo, kx, ky, unpixwin=unpixwin, legacy_steve=legacy_steve
             )
 
 

@@ -21,7 +21,7 @@ def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
         ringing when one applies a k-space filter. To solve this, we taper the
         edges of the map to zero prior to filtering.
 
-        See :py:func:`nawrapper.ps.get_steve_apo`
+        See :py:func:`nawrapper.ps.rectangular_apodization`
     kx_cut : float
         We cut modes with wavenumber :math:`|k_x| < k_x^{\mathrm{cut}}`.
     ky_cut : float
@@ -69,7 +69,7 @@ def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
     return result
 
 
-def get_steve_apo(shape, wcs, width, N_cut=0):
+def rectangular_apodization(shape, wcs, width, N_cut=0):
     r"""Generate a tapered mask at the edges of the box.
 
     Maps of actual data are unlikely to be periodic, which will induce
@@ -167,6 +167,15 @@ def apod_C2(input_mask, radius):
         win[id] = 1
 
     return enmap.ndmap(win, input_mask.wcs)
+
+
+def legacy_steve_shift(target_enmap):
+    """Applies a one-pixel shift to the WCS for reproducing Steve spectra.
+    
+    Arguments:
+        target_enmap {enmap} -- the enmap whose WCS we will modify in place.
+    """
+    target_enmap.wcs.wcs.crpix += np.array([-1, -1])
 
 
 def sub_mono_di(map_in, mask_in, nside, sub_dipole=True, verbose=False):
