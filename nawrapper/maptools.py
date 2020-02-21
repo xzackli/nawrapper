@@ -115,29 +115,6 @@ def rectangular_apodization(shape, wcs, width, N_cut=0):
     return apo
 
 
-def get_distance(input_mask):
-    r"""
-    Construct a map of the distance to the nearest zero pixel in the input.
-
-    Parameters
-    ----------
-    input_mask : enmap
-        The input mask
-
-    Returns
-    -------
-    dist : enmap
-        This map is the same size as the `input_mask`. Each pixel of this map
-        contains the distance to the nearest zero pixel at the corresponding
-        location in the input_mask.
-
-    """
-    pixSize_arcmin = np.sqrt(input_mask.pixsize() * (60 * 180 / np.pi) ** 2)
-    dist = scipy.ndimage.distance_transform_edt(np.asarray(input_mask))
-    dist *= pixSize_arcmin / 60
-    return dist
-
-
 def apod_C2(input_mask, radius):
     r"""
     Apodizes an input mask over a radius in degrees.
@@ -164,7 +141,7 @@ def apod_C2(input_mask, radius):
     if radius == 0:
         return input_mask
     else:
-        dist = get_distance(input_mask)
+        dist = enmap.distance_transform(input_mask) * 60
         id = np.where(dist > radius)
         win = dist / radius - np.sin(2 * np.pi * dist / radius) / (2 * np.pi)
         win[id] = 1
