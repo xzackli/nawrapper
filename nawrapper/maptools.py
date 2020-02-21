@@ -9,6 +9,12 @@ import healpy as hp
 def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
     r"""Apply a k-space filter on a map.
 
+    By default, we do not reproduce the output of Steve's code. We do offer
+    this functionality: set the optional flag `legacy_steve=True` to offset
+    the mask and the map by one pixel in each dimension.
+
+    You should filter both in temperature and polarization.
+
     Parameters
     ----------
     m : enmap
@@ -34,11 +40,7 @@ def kfilter_map(m, apo, kx_cut, ky_cut, unpixwin=True, legacy_steve=False):
         modes (the most positive cut mode in x and most negative cut mode in y)
         were not cut. This has a very small effect on the spectrum, but for
         reproducibility purposes we offer this behavior. By default we do not
-        use this.
-
-        To reproduce Steve's code behavior you should set
-        set `legacy_steve=True` here and in the constructor for each
-        :py:class:`nawrapper.ps.namap`.
+        use this. To reproduce Steve's code behavior you should set `legacy_steve=True`.
 
     Returns
     -------
@@ -100,7 +102,8 @@ def rectangular_apodization(shape, wcs, width, N_cut=0):
     apo = enmap.ones(shape, wcs=wcs)
     apo_i = np.arange(width)
     apo_profile = 1 - (
-        -np.sin(2.0 * np.pi * (width - apo_i) / (width - N_cut)) / (2.0 * np.pi)
+        -np.sin(2.0 * np.pi * (width - apo_i) /
+                (width - N_cut)) / (2.0 * np.pi)
         + (width - apo_i) / (width - N_cut)
     )
 
@@ -171,11 +174,91 @@ def apod_C2(input_mask, radius):
 
 def legacy_steve_shift(target_enmap):
     """Applies a one-pixel shift to the WCS for reproducing Steve spectra.
-    
+
     Arguments:
-        target_enmap {enmap} -- the enmap whose WCS we will modify in place.
+        target_enmap : enmap
+            The enmap whose WCS we will modify in place.
     """
     target_enmap.wcs.wcs.crpix += np.array([-1, -1])
+
+
+def preprocess_fourier(
+        target_enmap, shape=None, wcs=None,
+        unpixwin=True,
+        kx_cut=90, ky_cut=50, apo_width=40,
+        legacy_steve=False):
+    """Correct an enmap for the pixel window and filter in Fourier space.
+
+    This function performs the typical map preprocessing that occurs in
+    ACT map analysis. A CAR map has an anisotropic pixel window, which is
+    easily corrected in Fourier space. It is convenient to combine this step
+    with any filtering of Fourier modes that made be necessary while you have
+    the Fourier-transformed maps, such as removing horizontal noise modes.
+
+    If you specify map geometry information by passing `shape` and `wcs`,
+    the map will be extracted to that geometry *before* applying the Fourier
+    transform. In order to avoid ringing at the map edges, it's useful to
+    generate a rectangular taper, which is done in this function according to
+    this specified shape and WCS information. If these are not specified, it
+    is assumed that the full map will be used as the region for power spectrum
+    calculation, and the taper will be constructed at the edges of the full
+    map inwards. The taper width is specified by `apo_width`.
+
+
+    Parameters
+    ----------
+    target_enmap : enmap
+        The enmap to be modified
+    shape : [tuple of ints], optional
+        extraction map shape, by default None
+    wcs : astropy.wcs, optional
+        extraction map WCS information, by default None
+    unpixwin : bool, optional
+        Correct for the CAR pixel window if True, by default True
+    kx_cut : int, optional
+        We cut modes with wavenumber: math: `| k_x | < k_x ^ {\mathrm{cut}}`,
+        by default 90
+    ky_cut : int, optional
+        We cut modes with wavenumber: math: `| k_y | < k_y ^ {\mathrm{cut}}`, 
+        by default 50
+    apo_width : int, optional
+        width of the rectangular taper for the apodized mask, by default 40
+    legacy_steve : bool, optional
+        Use a slightly different filter if True, to reproduce Steve's pipeline.
+        Steve's k-space filter as of June 2019 had a bug where two k-space
+        modes (the most positive cut mode in x and most negative cut mode in y)
+        were not cut. This has a very small effect on the spectrum, but for
+        reproducibility purposes we offer this behavior. By default False
+
+    Returns
+    -------
+    enmap
+        the final processed map
+    """
+
+    # get the shape and WCS from map if we didn't get it
+    # this means the `extract` call later will just make a copy if
+    # no shape/wcs are passed.
+    if shape is None or wcs is None:
+        shape, wcs = target_enmap.shape, target_enmap.wcs
+
+    result = target_enmap.copy()
+    if legacy_steve:
+        # generate an apodization in the region specified
+        legacy_steve_shift(result)
+
+    # set up just the shape/wcs we want to compute on
+    result = enmap.extract(result, shape, wcs)
+
+    # construct a tapered edge (an apodized rectangle) to avoid ringing
+    apo = rectangular_apodization(shape, wcs, 40)
+
+    # perform the pixel window and filter
+    result = kfilter_map(
+        result, apo, kx_cut, ky_cut,
+        unpixwin, legacy_steve)
+
+    return result
 
 
 def sub_mono_di(map_in, mask_in, nside, sub_dipole=True, verbose=False):
@@ -205,10 +288,10 @@ def get_cmb_sim_hp(signal, nside_out):
 
     Parameters
     ----------
-    signal : dictionary
-        dictionary containing spectra starting from ell=0 with keys
+    signal: dictionary
+        dictionary containing spectra starting from ell = 0 with keys
         TT, EE, BB, TE.
-    nside_out : int
+    nside_out: int
         output map resolution
     """
     cmb_sim = hp.synfast(

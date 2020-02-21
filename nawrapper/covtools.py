@@ -89,12 +89,14 @@ class nacov:
         if namap1.has_pol and namap2.has_temp:
             spec_list += ["ET"]
 
+        l_theory = np.arange(self.lmax + 1)
         for XY in spec_list:
             X, Y = XY
             if XY not in self.signal:
+                # linear interpolation
                 self.signal[XY] = self.smooth_and_interpolate(
-                    np.arange(self.lmax + 1),
-                    self.bins.unbin_cell(self.Cl12[XY]),
+                    l_theory,
+                    np.interp(l_theory, self.lb, self.Cl12[XY]),
                     smoothing_window,
                     smoothing_polyorder,
                 )
@@ -104,8 +106,8 @@ class nacov:
                 if noise_smoothing_mode == "savgol":
                     self.noise[X + "1" + Y + "1"] = np.abs(
                         self.smooth_and_interpolate(
-                            np.arange(self.lmax + 1),
-                            self.bins.unbin_cell(self.Cl11[XY]),
+                            l_theory,
+                            np.interp(l_theory, self.lb, self.Cl11[XY]),
                             smoothing_window,
                             smoothing_polyorder,
                         )
@@ -122,19 +124,18 @@ class nacov:
                 if noise_smoothing_mode == "savgol":
                     self.noise[X + "2" + Y + "2"] = np.abs(
                         self.smooth_and_interpolate(
-                            np.arange(self.lmax + 1),
-                            self.bins.unbin_cell(self.Cl22[XY]),
+                            l_theory,
+                            np.interp(l_theory, self.lb, self.Cl22[XY]),
                             smoothing_window,
                             smoothing_polyorder,
                         )
                         - self.signal[XY]
                     )
                 elif noise_smoothing_mode == "poly":
-                    self.signal[XY] = self.smooth_and_interpolate(
-                        np.arange(self.lmax + 1),
-                        self.bins.unbin_cell(self.Cl12[XY]),
-                        smoothing_window,
-                        smoothing_polyorder,
+                    self.noise[X + "2" + Y + "2"] = self.get_smooth_noise(
+                        cb=self.Cl22[XY],
+                        signal=self.signal[XY],
+                        smoothing_polyorder=smoothing_polyorder,
                     )
 
         # any signal or noise not specified is set to zero
@@ -142,26 +143,38 @@ class nacov:
         self.signal = defaultdict(lambda: np.zeros(self.lmax + 1), self.signal)
 
         self.beam = {}
-        self.beam["T1"] = (
-            namap1.beam_temp[: self.lmax + 1] * namap1.pixwin_temp[: self.lmax + 1]
-        )
-        self.beam["T2"] = (
-            namap2.beam_temp[: self.lmax + 1] * namap2.pixwin_temp[: self.lmax + 1]
-        )
-        self.beam["E1"] = (
-            namap1.beam_pol[: self.lmax + 1] * namap1.pixwin_pol[: self.lmax + 1]
-        )
-        self.beam["E2"] = (
-            namap2.beam_pol[: self.lmax + 1] * namap2.pixwin_pol[: self.lmax + 1]
-        )
 
-        # currently no difference between E and B beam
-        self.beam["B1"] = (
-            namap1.beam_pol[: self.lmax + 1] * namap1.pixwin_pol[: self.lmax + 1]
-        )
-        self.beam["B2"] = (
-            namap2.beam_pol[: self.lmax + 1] * namap2.pixwin_pol[: self.lmax + 1]
-        )
+        # set temperature beams
+        if namap1.has_temp:
+            self.beam["T1"] = (
+                namap1.beam_temp[: self.lmax + 1] *
+                namap1.pixwin_temp[: self.lmax + 1]
+            )
+        if namap2.has_temp:
+            self.beam["T2"] = (
+                namap2.beam_temp[: self.lmax + 1] *
+                namap2.pixwin_temp[: self.lmax + 1]
+            )
+
+        # set polarization beams
+        if namap1.has_pol:
+            self.beam["E1"] = (
+                namap1.beam_pol[: self.lmax + 1] *
+                namap1.pixwin_pol[: self.lmax + 1]
+            )
+            self.beam["B1"] = (
+                namap1.beam_pol[: self.lmax + 1] *
+                namap1.pixwin_pol[: self.lmax + 1]
+            )
+        if namap2.has_pol:
+            self.beam["E2"] = (
+                namap2.beam_pol[: self.lmax + 1] *
+                namap2.pixwin_pol[: self.lmax + 1]
+            )
+            self.beam["B2"] = (
+                namap2.beam_pol[: self.lmax + 1] *
+                namap2.pixwin_pol[: self.lmax + 1]
+            )
 
         # for iterating over the output.
         # doing this explicity because it's actually shorter than some loops

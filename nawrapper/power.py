@@ -88,7 +88,8 @@ class abstract_namap:
         # a tuple of two beams
         if hasattr(beams, "__len__"):
             if len(beams) == 2:
-                self.beam_temp, self.beam_pol = beams[0].copy(), beams[1].copy()
+                self.beam_temp, self.beam_pol = beams[0].copy(
+                ), beams[1].copy()
             else:
                 if verbose:
                     print("Assuming the same beams for both I and QU.")
@@ -142,29 +143,28 @@ class abstract_namap:
             else:
                 beam_temp = np.ones(max(self.lmax_beam, len(self.beam_temp)))
                 beam_temp[: len(self.beam_temp)] = self.beam_temp
-                beam_temp[len(self.beam_temp) :] = self.beam_temp[-1]
+                beam_temp[len(self.beam_temp):] = self.beam_temp[-1]
             self.beam_temp = beam_temp
+            # CAR pixwin is done at map level
+            self.pixwin_temp = np.ones_like(beam_temp)
         if self.has_pol:
             if self.beam_pol is None:
                 if verbose:
-                    print("polarization beam not specified, setting " + "P beam to 1.")
+                    print("polarization beam not specified, setting " +
+                          "P beam to 1.")
                 beam_pol = np.ones(self.lmax_beam)
             else:
                 beam_pol = np.ones(max(self.lmax_beam, len(self.beam_pol)))
                 beam_pol[: len(self.beam_pol)] = self.beam_pol
-                beam_pol[len(self.beam_pol) :] = self.beam_pol[-1]
+                beam_pol[len(self.beam_pol):] = self.beam_pol[-1]
             self.beam_pol = beam_pol
+            # CAR pixwin is done at map level
+            self.pixwin_pol = np.ones_like(beam_pol)
 
 
 class namap_car(abstract_namap):
     r"""Map container for CAR pixellization
 
-    By default, we do not reproduce the output of Steve's code. We do offer
-    this functionality: set the optional flag `legacy_steve=True` to offset
-    the mask and the map by one pixel in each dimension. This constructor
-    multiplies the apodized k-space taper into your mask.
-    In general, your mask should already have the edges tapered, so this
-    will not change your results significantly.
     """
 
     def __init__(
@@ -195,21 +195,6 @@ class namap_car(abstract_namap):
             The masks you want to operate on.
         beams: list or tuple
             The beams you want to use.
-        unpixwin: bool
-            If true, we account for the pixel window function when computing
-            power spectra. For healpix this is accomplished by modifying the
-            beam in-place.
-        kx : float
-            k-space horizontal filter mode, ky-modes with absolute value less
-            than kx are filtered.
-        kx : float
-            k-space vertical filter mode, kx-modes with absolute value less
-            than ky are filtered.
-        kspace_apo : float
-            optional parameter specifying width of apodization
-        legacy_steve : bool
-            Shifts the mask by 1,1 relative to the maps to preproduce Steve's
-            code.
         verbose : bool
             Print various information about what is being assumed. You should
             probably enable this the first time you try to run a particular
@@ -312,7 +297,8 @@ class namap_hp(abstract_namap):
 
         self.lmax_beam = 3 * self.nside
         self.set_beam(verbose=verbose)
-        self.pixwin_temp, self.pixwin_pol = hp.sphtfunc.pixwin(self.nside, pol=True)
+        self.pixwin_temp, self.pixwin_pol = hp.sphtfunc.pixwin(
+            self.nside, pol=True)
         if verbose:
             print("Including the healpix pixel window function.")
         if self.has_temp:
@@ -322,7 +308,8 @@ class namap_hp(abstract_namap):
 
         # this is written so that the beam is kept separate from pixwin
         if self.has_temp:
-            beam_temp = self.beam_temp[: len(self.pixwin_temp)] * self.pixwin_temp
+            beam_temp = self.beam_temp[: len(
+                self.pixwin_temp)] * self.pixwin_temp
         if self.has_pol:
             beam_pol = self.beam_pol[: len(self.pixwin_pol)] * self.pixwin_pol
 
@@ -408,7 +395,8 @@ class mode_coupling:
 
             if namap1.mode != namap2.mode:
                 raise ValueError(
-                    "pixel types m1:%s, m2:%s incompatible" % (namap1.mode, namap2.mode)
+                    "pixel types m1:%s, m2:%s incompatible" % (
+                        namap1.mode, namap2.mode)
                 )
 
             self.workspace_dict = {}
@@ -621,7 +609,8 @@ class nabin(nmt.NmtBin):
                 else:
                     f_ell = np.ones(len(ells))
             self.bin = lib.bins_create_py(
-                bpws.astype(np.int32), ells.astype(np.int32), weights, f_ell, int(lmax)
+                bpws.astype(np.int32), ells.astype(
+                    np.int32), weights, f_ell, int(lmax)
             )
         else:
             self.bin = lib.bins_constant(nlb, lmax, int(is_Dell))
@@ -664,10 +653,11 @@ def read_bins(file, lmax=7925, is_Dell=False):
     ells = np.arange(lmax)
     bpws = -1 + np.zeros_like(ells)  # Array of bandpower indices
     for i, (bl, br) in enumerate(zip(binleft[1:], binright[1:])):
-        bpws[bl : br + 1] = i
+        bpws[bl: br + 1] = i
 
     weights = np.array([1.0 / np.sum(bpws == bpws[l]) for l in range(lmax)])
-    b = nabin(lmax=lmax, bpws=bpws, ells=ells, weights=weights, is_Dell=is_Dell)
+    b = nabin(lmax=lmax, bpws=bpws, ells=ells,
+              weights=weights, is_Dell=is_Dell)
     return b
 
 
@@ -688,7 +678,7 @@ def create_binning(lmax, lmin=2, widths=1, weight_function=None):
     bin_left = lmin
     bin_num = 0
     for bin_num, w in enumerate(widths):
-        bpws[bin_left : bin_left + w] = bin_num
+        bpws[bin_left: bin_left + w] = bin_num
         bin_left += w
 
     if weight_function is None:
@@ -707,14 +697,17 @@ def bin_spec_dict(Cb, binleft, binright, lmax):
 
     result = {}
     for spec_key in Cb:
-        ell_sub_list = [np.arange(l, r) for (l, r) in zip(binleft, binright + 1)]
-        lb = np.array([np.sum(ell_sub) / len(ell_sub) for ell_sub in ell_sub_list])
+        ell_sub_list = [np.arange(l, r)
+                        for (l, r) in zip(binleft, binright + 1)]
+        lb = np.array([np.sum(ell_sub) / len(ell_sub)
+                       for ell_sub in ell_sub_list])
         cl_from_zero = np.zeros(lmax + 1)
         cl_from_zero[Cb["ell"].astype(int)] = Cb[spec_key]
         weights = np.arange(lmax + 1) * (np.arange(lmax + 1) + 1)
         result[spec_key] = np.array(
             [
-                np.sum((weights * cl_from_zero)[ell_sub]) / np.sum(weights[ell_sub])
+                np.sum((weights * cl_from_zero)
+                       [ell_sub]) / np.sum(weights[ell_sub])
                 for ell_sub in ell_sub_list
             ]
         )
@@ -785,17 +778,21 @@ def compute_spectra(namap1, namap2, bins=None, mc=None, lmax=None, verbose=True)
     # compute the TEB spectra as appropriate
     Cb = {}
     if namap1.has_temp and namap2.has_temp:
-        Cb["TT"] = mc.compute_master(namap1.field_spin0, namap2.field_spin0, mc.w00)[0]
+        Cb["TT"] = mc.compute_master(
+            namap1.field_spin0, namap2.field_spin0, mc.w00)[0]
     if namap1.has_temp and namap2.has_pol:
-        spin1 = mc.compute_master(namap1.field_spin0, namap2.field_spin2, mc.w02)
+        spin1 = mc.compute_master(
+            namap1.field_spin0, namap2.field_spin2, mc.w02)
         Cb["TE"] = spin1[0]
         Cb["TB"] = spin1[1]
     if namap1.has_pol and namap2.has_temp:
-        spin1 = mc.compute_master(namap1.field_spin2, namap2.field_spin0, mc.w20)
+        spin1 = mc.compute_master(
+            namap1.field_spin2, namap2.field_spin0, mc.w20)
         Cb["ET"] = spin1[0]
         Cb["BT"] = spin1[1]
     if namap1.has_pol and namap2.has_pol:
-        spin2 = mc.compute_master(namap1.field_spin2, namap2.field_spin2, mc.w22)
+        spin2 = mc.compute_master(
+            namap1.field_spin2, namap2.field_spin2, mc.w22)
         Cb["EE"] = spin2[0]
         Cb["EB"] = spin2[1]
         Cb["BE"] = spin2[2]
@@ -808,7 +805,8 @@ def compute_spectra(namap1, namap2, bins=None, mc=None, lmax=None, verbose=True)
 def util_bin_FFTspec_CAR(data, modlmap, bin_edges):
     digitized = np.digitize(np.ndarray.flatten(modlmap), bin_edges, right=True)
     return (
-        np.bincount(digitized, (data).reshape(-1))[1:-1] / np.bincount(digitized)[1:-1]
+        np.bincount(digitized, (data).reshape(-1)
+                    )[1:-1] / np.bincount(digitized)[1:-1]
     )
 
 
