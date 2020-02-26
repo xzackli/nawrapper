@@ -242,23 +242,31 @@ def preprocess_fourier(
     if shape is None or wcs is None:
         shape, wcs = target_enmap.shape, target_enmap.wcs
 
-    result = target_enmap.copy()
-    if legacy_steve:
-        # generate an apodization in the region specified
-        legacy_steve_shift(result)
-
-    # set up just the shape/wcs we want to compute on
-    result = enmap.extract(result, shape, wcs)
-
     # construct a tapered edge (an apodized rectangle) to avoid ringing
     apo = rectangular_apodization(shape, wcs, 40)
+    
+    maps = target_enmap.copy()
+    if legacy_steve:
+        # generate an apodization in the region specified
+        legacy_steve_shift(maps)
 
+    if maps.ndim == 2:
+        maps = np.expand_dims(maps, axis=0)
+    
+    maps = enmap.extract(maps, shape, wcs)
     # perform the pixel window and filter
-    result = kfilter_map(
-        result, apo, kx_cut, ky_cut,
-        unpixwin, legacy_steve)
-
-    return result
+    ncomp = maps.shape[0]   # loop over components
+    for i in range(ncomp):
+        
+        result = kfilter_map(
+            maps[i,:,:], apo, kx_cut, ky_cut,
+            unpixwin, legacy_steve)
+        maps[i,:,:] = result
+    
+    if target_enmap.ndim == 2:
+        return maps[0,:,:]
+    else:
+        return maps
 
 
 def sub_mono_di(map_in, mask_in, nside, sub_dipole=True, verbose=False):
