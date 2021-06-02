@@ -46,7 +46,7 @@ specify the conda environment!
 
 If you are running on a machine with Jupyter like cori or niagara, we
 also set up ipykernel so your conda environment shows up in Jupyter. You
-can do this on tiger too, but it’s less convenient (see `Jupyter on the
+can do this on tiger too (see `Jupyter on the
 Cluster`_).
 
 .. code:: bash
@@ -76,9 +76,7 @@ run
 
 .. code:: bash
 
-  git clone git@github.com:simonsobs/pixell.git
-  cd pixell
-  python setup.py install --user
+    pip install pixell --user
 
 You also need `healpy` to manipulate healpix maps.
 
@@ -107,7 +105,19 @@ using pip, this is all you have to do.
 
 
 
+Working on Tiger/Della
+~~~~~~~~~~~~~~~~~~
+I maintain module files for ACT analysis on the Princeton clusters (Tiger and Della),
+with instructions available on the `ACT wiki`_ (scroll down to the "Power Spectrum Analysis" section).
+These will let you import the GitHub master branches of pixell, NaMaster (pymaster), and nawrapper
+by adding some paths to your PYTHONPATH.
+
+
+
+
+
 .. _NaMaster: https://github.com/LSSTDESC/NaMaster
 .. _documentation: http://physics.princeton.edu/~zequnl/nawrapper/docs/build/html/index.html
 .. _Jupyter on the Cluster: https://oncomputingwell.princeton.edu/2018/05/jupyter-on-the-cluster/
 .. _set up your SSH keys on GitHub: https://help.github.com/en/articles/adding-a-new-ssh-key-to-your-github-account
+.. _ACT wiki: https://phy-wiki.princeton.edu/polwiki/pmwiki.php?n=Software.TigerAndDella
