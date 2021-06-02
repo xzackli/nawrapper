@@ -47,8 +47,8 @@ noise_map_2 = enmap.rand_map(shape, wcs, nl[np.newaxis, np.newaxis])
 # plt.yscale('log')
 # plt.legend()
 
-namap_1 = nw.namap(maps=(imap + noise_map_1, None, None), masks=mask)
-namap_2 = nw.namap(maps=(imap + noise_map_2, None, None), masks=mask)
+namap_1 = nw.namap_car(maps=(imap + noise_map_1, None, None), masks=mask)
+namap_2 = nw.namap_car(maps=(imap + noise_map_2, None, None), masks=mask)
 
 binfile = '../notebooks/data/BIN_ACTPOL_50_4_SC_low_ell'
 bins = nw.read_bins(binfile)
