@@ -29,10 +29,7 @@ install:
   - conda install -c conda-forge cfitsio=3.430 libcblas gsl -n test-environment
   - conda install -c conda-forge namaster -n test-environment
   - pip install nose healpy scipy
-  - git clone https://github.com/simonsobs/pixell.git
-  - cd pixell
-  - python setup.py install --user
-  - cd ../
+  - pip install pixell --user
   - pip install codecov
   - pip install --user travis-sphinx
   - export PATH=$HOME/.local/bin:$PATH
