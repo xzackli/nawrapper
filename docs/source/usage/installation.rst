@@ -106,7 +106,7 @@ using pip, this is all you have to do.
 
 
 Working on Tiger/Della
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 I maintain module files for ACT analysis on the Princeton clusters (Tiger and Della),
 with instructions available on the `ACT wiki`_ (scroll down to the "Power Spectrum Analysis" section).
 These will let you import the GitHub master branches of pixell, NaMaster (pymaster), and nawrapper
