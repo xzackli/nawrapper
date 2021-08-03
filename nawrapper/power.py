@@ -364,7 +364,7 @@ class mode_coupling:
         mcm_dir=None,
         overwrite=False,
         verbose=True,
-        n_iter=0,
+        n_iter=None,
         **kwargs
     ):
         r"""
@@ -410,6 +410,14 @@ class mode_coupling:
                     "pixel types m1:%s, m2:%s incompatible" % (
                         namap1.mode, namap2.mode)
                 )
+
+            if n_iter is None:
+                if namap1.mode == "car":
+                    n_iter = 0
+                elif namap1.mode == "healpix":
+                    n_iter = 3
+                else:
+                    raise ValueError("bad pixel type: %s", namap1.mode)
 
             self.workspace_dict = {}
             self.w00, self.w02, self.w20, self.w22 = None, None, None, None
