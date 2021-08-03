@@ -417,7 +417,7 @@ class mode_coupling:
                 elif namap1.mode == "healpix":
                     n_iter = 3
                 else:
-                    raise ValueError("bad pixel type: %s", namap1.mode)
+                    raise ValueError("bad pixel type: %s" % namap1.mode)
 
             self.workspace_dict = {}
             self.w00, self.w02, self.w20, self.w22 = None, None, None, None
