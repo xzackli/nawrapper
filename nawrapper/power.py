@@ -259,7 +259,7 @@ class namap_hp(abstract_namap):
         verbose=True,
         n_iter=3,
         purify_e=False,
-        purify_b=False,, 
+        purify_b=False,
         **kwargs
     ):
         r"""Generate a healpix map container
