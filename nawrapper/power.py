@@ -177,6 +177,9 @@ class namap_car(abstract_namap):
         sub_wcs=None,
         purify_e=False,
         purify_b=False,
+        n_iter=0, 
+        lmax_sht=-1, 
+        **kwargs
     ):
         r"""Generate a CAR map container
 
@@ -226,9 +229,11 @@ class namap_car(abstract_namap):
                 [self.map_I],
                 beam=self.beam_temp,
                 wcs=self.wcs,
-                n_iter=0,
+                n_iter=n_iter,
                 purify_e=purify_e,
                 purify_b=purify_b,
+                lmax_sht=lmax_sht, 
+                **kwargs
             )
         if self.has_pol:
             self.field_spin2 = nmt.NmtField(
@@ -236,9 +241,11 @@ class namap_car(abstract_namap):
                 [self.map_Q, self.map_U],
                 beam=self.beam_pol,
                 wcs=self.wcs,
-                n_iter=0,
+                n_iter=n_iter,
                 purify_e=purify_e,
                 purify_b=purify_b,
+                lmax_sht=lmax_sht, 
+                **kwargs
             )
 
 
@@ -252,7 +259,8 @@ class namap_hp(abstract_namap):
         verbose=True,
         n_iter=3,
         purify_e=False,
-        purify_b=False,
+        purify_b=False,, 
+        **kwargs
     ):
         r"""Generate a healpix map container
 
@@ -324,6 +332,7 @@ class namap_hp(abstract_namap):
                 n_iter=n_iter,
                 purify_e=purify_e,
                 purify_b=purify_b,
+                **kwargs
             )
         if self.has_pol:
             self.field_spin2 = nmt.NmtField(
@@ -333,6 +342,7 @@ class namap_hp(abstract_namap):
                 n_iter=n_iter,
                 purify_e=purify_e,
                 purify_b=purify_b,
+                **kwargs
             )
 
 
