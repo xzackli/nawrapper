@@ -364,6 +364,7 @@ class mode_coupling:
         mcm_dir=None,
         overwrite=False,
         verbose=True,
+        n_iter=0,
         **kwargs
     ):
         r"""
@@ -417,28 +418,28 @@ class mode_coupling:
             if namap1.has_temp and namap2.has_temp:
                 self.w00 = nmt.NmtWorkspace()
                 self.w00.compute_coupling_matrix(
-                    namap1.field_spin0, namap2.field_spin0, bins, n_iter=0, **kwargs
+                    namap1.field_spin0, namap2.field_spin0, bins, n_iter=n_iter, **kwargs
                 )
                 self.workspace_dict[(0, 0)] = self.w00
 
             if namap1.has_temp and namap2.has_pol:
                 self.w02 = nmt.NmtWorkspace()
                 self.w02.compute_coupling_matrix(
-                    namap1.field_spin0, namap2.field_spin2, bins, n_iter=0, **kwargs
+                    namap1.field_spin0, namap2.field_spin2, bins, n_iter=n_iter, **kwargs
                 )
                 self.workspace_dict[(0, 2)] = self.w02
 
             if namap1.has_pol and namap2.has_temp:
                 self.w20 = nmt.NmtWorkspace()
                 self.w20.compute_coupling_matrix(
-                    namap1.field_spin2, namap2.field_spin0, bins, n_iter=0, **kwargs
+                    namap1.field_spin2, namap2.field_spin0, bins, n_iter=n_iter, **kwargs
                 )
                 self.workspace_dict[(2, 0)] = self.w20
 
             if namap1.has_pol and namap2.has_pol:
                 self.w22 = nmt.NmtWorkspace()
                 self.w22.compute_coupling_matrix(
-                    namap1.field_spin2, namap2.field_spin2, bins, n_iter=0, **kwargs
+                    namap1.field_spin2, namap2.field_spin2, bins, n_iter=n_iter, **kwargs
                 )
                 self.workspace_dict[(2, 2)] = self.w22
 
