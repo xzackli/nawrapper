@@ -1,0 +1,802 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>nawrapper package &#8212; NaWrapper 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="nawrapper" href="modules.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="nawrapper-package">
+<h1>nawrapper package<a class="headerlink" href="#nawrapper-package" title="Permalink to this headline">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="module-nawrapper.covtools">
+<span id="nawrapper-covtools-module"></span><h2>nawrapper.covtools module<a class="headerlink" href="#module-nawrapper.covtools" title="Permalink to this headline">¶</a></h2>
+<p>Power spectrum objects and utilities.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.covtools.compute_covmat">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.covtools.</span></span><span class="sig-name descname"><span class="pre">compute_covmat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">namap1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">namap2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bins</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mc_11</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mc_12</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mc_22</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">signal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing_window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">11</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing_polyorder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cosmic_variance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.covtools.compute_covmat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute all of the relevant covariances between two namap.</p>
+<p>This computes all covarainces between two
+<a class="reference internal" href="#nawrapper.power.abstract_namap" title="nawrapper.power.abstract_namap"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.abstract_namap</span></code></a>
+for which there is information.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>namap1</strong> (<a class="reference internal" href="#nawrapper.power.namap_hp" title="nawrapper.power.namap_hp"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.namap_hp</span></code></a> or) – <code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.ps.namap_car</span></code>.
+The first map to compute correlations with.</p></li>
+<li><p><strong>namap2</strong> (<a class="reference internal" href="#nawrapper.power.namap_hp" title="nawrapper.power.namap_hp"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.namap_hp</span></code></a> or) – <code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.ps.namap_car</span></code>.
+To be correlated with <cite>namap1</cite>.</p></li>
+<li><p><strong>bins</strong> (<em>NaMaster NmtBin object</em>) – The binning scheme used for this. This must match the
+mode-coupling objects, if you pass those.</p></li>
+<li><p><strong>mc_11</strong> (<a class="reference internal" href="#nawrapper.power.mode_coupling" title="nawrapper.power.mode_coupling"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.mode_coupling</span></code></a> object (optional)) – This object contains precomputed mode-coupling matrices for the
+auto-spectrum of <cite>namap1</cite>.</p></li>
+<li><p><strong>mc_12</strong> (<a class="reference internal" href="#nawrapper.power.mode_coupling" title="nawrapper.power.mode_coupling"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.mode_coupling</span></code></a> object (optional)) – This object contains precomputed mode-coupling matrices for the
+cross-spectrum between <cite>namap1</cite> and <cite>namap2</cite>.</p></li>
+<li><p><strong>mc_22</strong> (<a class="reference internal" href="#nawrapper.power.mode_coupling" title="nawrapper.power.mode_coupling"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.mode_coupling</span></code></a> object (optional)) – This object contains precomputed mode-coupling matrices for the
+auto-spectrum of <cite>namap2</cite>.</p></li>
+<li><p><strong>signal</strong> (<em>dictionary</em>) – The unbinned input spectra, must have keys TT, TE, EE, etc.
+Any unspecified signal spectra will be estimated from the cross-
+spectrum beteween namap1 and namap2.</p></li>
+<li><p><strong>noise</strong> (<em>dictionary</em>) – The unbinned noise power spectra. Must have keys T1T1, T2T2,
+and others of the form XiYj, where X,Y are in T, E, B, and i,j are
+1 or 2. These refer to the noise spectra in various maps.
+Unspecified noise where <cite>i == j</cite> will be computed from the auto minus
+cross-spectra, and <cite>i != j</cite> will be set to zero.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="simple">
+<dt>smoothing_window<span class="classifier">int</span></dt><dd><p>Savgol filter smoothing window, for smoothing the estimated
+signal and noise spectra.</p>
+</dd>
+<dt>smoothing_polyorder<span class="classifier">int</span></dt><dd><p>Savgol filter polynomial order, for smoothing the estimated
+signal and noise spectra.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Binned covariances, with the relevant covariances (i.e. <cite>TETT</cite>)
+as dictionary keys. This also contains the bin centers as key ‘ell’.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.covtools.delta">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.covtools.</span></span><span class="sig-name descname"><span class="pre">delta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.covtools.delta" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.covtools.get_Nl">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.covtools.</span></span><span class="sig-name descname"><span class="pre">get_Nl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">theta_fwhm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(10.0,</span> <span class="pre">7.0,</span> <span class="pre">5.0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_T</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(68.1,</span> <span class="pre">42.6,</span> <span class="pre">65.4)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f_sky</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2509</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.covtools.get_Nl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get Knox TT noise curve.
+Uses the Planck bluebook parameters by default.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>theta_fwhm</strong> (<em>list of float:</em>) – beam resolution in arcmin</p></li>
+<li><p><strong>sigma_T</strong> (<em>list of float</em>) – temperature resolution in muK</p></li>
+<li><p><strong>sigma_P</strong> (<em>list of float</em>) – polarization resolution in muK</p></li>
+<li><p><strong>f_sky</strong> (<em>float</em>) – sky fraction covered</p></li>
+<li><p><strong>l_min</strong> (<em>int</em>) – minimum ell for CMB power spectrum</p></li>
+<li><p><strong>l_max</strong> (<em>int</em>) – maximum ell for CMB power spectrum</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – flag for printing out debugging output</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="nawrapper.covtools.nacov">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">nawrapper.covtools.</span></span><span class="sig-name descname"><span class="pre">nacov</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">namap1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">namap2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mc_11</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mc_12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mc_22</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">signal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_smoothing_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'savgol'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing_window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">11</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing_polyorder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cosmic_variance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.covtools.nacov" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Wrapper around the NaMaster covariance workspace object.</p>
+<p>This object contains the computationally intensive parts of covariance
+computation – the coupling coefficients.</p>
+<p>Create a <cite>nacov</cite> object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>namap1</strong> (<em>namap</em>) – We use the mask in this namap to compute the mode-coupling
+matrices.</p></li>
+<li><p><strong>namap2</strong> (<em>namap</em>) – We use the mask in this namap to compute the mode-coupling
+matrices.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.covtools.nacov.cl_inputs">
+<span class="sig-name descname"><span class="pre">cl_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.covtools.nacov.cl_inputs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.covtools.nacov.compute">
+<span class="sig-name descname"><span class="pre">compute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.covtools.nacov.compute" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.covtools.nacov.compute_subcovmat">
+<span class="sig-name descname"><span class="pre">compute_subcovmat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spins</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.covtools.nacov.compute_subcovmat" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.covtools.nacov.get_cov_input_spectra">
+<span class="sig-name descname"><span class="pre">get_cov_input_spectra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spins</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.covtools.nacov.get_cov_input_spectra" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.covtools.nacov.get_field">
+<span class="sig-name descname"><span class="pre">get_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">namap_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field_spin</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.covtools.nacov.get_field" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.covtools.nacov.get_smooth_noise">
+<span class="sig-name descname"><span class="pre">get_smooth_noise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">signal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing_polyorder</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.covtools.nacov.get_smooth_noise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.covtools.nacov.smooth_and_interpolate">
+<span class="sig-name descname"><span class="pre">smooth_and_interpolate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing_window</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing_polyorder</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.covtools.nacov.smooth_and_interpolate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.covtools.nacov.total_spec">
+<span class="sig-name descname"><span class="pre">total_spec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">XY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.covtools.nacov.total_spec" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-nawrapper.maptools">
+<span id="nawrapper-maptools-module"></span><h2>nawrapper.maptools module<a class="headerlink" href="#module-nawrapper.maptools" title="Permalink to this headline">¶</a></h2>
+<p>Utility functions for preprocessing maps.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.maptools.apod_C2">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.maptools.</span></span><span class="sig-name descname"><span class="pre">apod_C2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.maptools.apod_C2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apodizes an input mask over a radius in degrees.</p>
+<p>A sharp mask will cause complicated mode coupling and ringing. One solution
+is to smooth out the sharp edges. This function applies the C2 apodisation
+as defined in <a class="reference external" href="https://arxiv.org/abs/0903.2350">0903.2350</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_mask</strong> (<em>enmap</em>) – The input mask (must have all pixel values be non-negative).</p></li>
+<li><p><strong>radius</strong> (<em>float</em>) – Apodization radius in degrees.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>result</strong> – The apodized mask.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>enmap</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.maptools.get_cmb_sim_hp">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.maptools.</span></span><span class="sig-name descname"><span class="pre">get_cmb_sim_hp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">signal</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nside_out</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.maptools.get_cmb_sim_hp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a healpix realization of the spectra.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>signal</strong> (<em>dictionary</em>) – dictionary containing spectra starting from ell = 0 with keys
+TT, EE, BB, TE.</p></li>
+<li><p><strong>nside_out</strong> (<em>int</em>) – output map resolution</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.maptools.get_distance">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.maptools.</span></span><span class="sig-name descname"><span class="pre">get_distance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_mask</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.maptools.get_distance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct a map of the distance to the nearest zero pixel in the input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>input_mask</strong> (<em>enmap</em>) – The input mask</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>dist</strong> – This map is the same size as the <cite>input_mask</cite>. Each pixel of this map
+contains the distance to the nearest zero pixel at the corresponding
+location in the input_mask.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>enmap</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.maptools.kfilter_map">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.maptools.</span></span><span class="sig-name descname"><span class="pre">kfilter_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">apo</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kx_cut</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ky_cut</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unpixwin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">legacy_steve</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.maptools.kfilter_map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply a k-space filter on a map.</p>
+<p>By default, we do not reproduce the output of Steve’s code. We do offer
+this functionality: set the optional flag <cite>legacy_steve=True</cite> to offset
+the mask and the map by one pixel in each dimension.</p>
+<p>You should filter both in temperature and polarization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>m</strong> (<em>enmap</em>) – Input map which this function will filter.</p></li>
+<li><p><strong>apo</strong> (<em>enmap</em>) – <p>This map is a smooth tapering of the edges of the map, to be multiplied
+into the map prior to filtering. The filtered map is divided by the
+nonzero pixels of this map at the end. This is required because
+maps of actual data are unlikely to be periodic, which will induce
+ringing when one applies a k-space filter. To solve this, we taper the
+edges of the map to zero prior to filtering.</p>
+<p>See <code class="xref py py-func docutils literal notranslate"><span class="pre">nawrapper.ps.rectangular_apodization()</span></code></p>
+</p></li>
+<li><p><strong>kx_cut</strong> (<em>float</em>) – We cut modes with wavenumber <span class="math notranslate nohighlight">\(|k_x| &lt; k_x^{\mathrm{cut}}\)</span>.</p></li>
+<li><p><strong>ky_cut</strong> (<em>float</em>) – We cut modes with wavenumber <span class="math notranslate nohighlight">\(|k_y| &lt; k_y^{\mathrm{cut}}\)</span>.</p></li>
+<li><p><strong>unpixwin</strong> (<em>bool</em>) – Correct for the CAR pixel window if True.</p></li>
+<li><p><strong>legacy_steve</strong> (<em>bool</em>) – Use a slightly different filter if True, to reproduce Steve’s pipeline.
+Steve’s k-space filter as of June 2019 had a bug where two k-space
+modes (the most positive cut mode in x and most negative cut mode in y)
+were not cut. This has a very small effect on the spectrum, but for
+reproducibility purposes we offer this behavior. By default we do not
+use this. To reproduce Steve’s code behavior you should set <cite>legacy_steve=True</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>result</strong> – The map with the specified k-space filter applied.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>enmap</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.maptools.legacy_steve_shift">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.maptools.</span></span><span class="sig-name descname"><span class="pre">legacy_steve_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_enmap</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.maptools.legacy_steve_shift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies a one-pixel shift to the WCS for reproducing Steve spectra.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>target_enmap</strong> – enmap
+The enmap whose WCS we will modify in place.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.maptools.preprocess_fourier">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.maptools.</span></span><span class="sig-name descname"><span class="pre">preprocess_fourier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_enmap</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unpixwin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kx_cut</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">90</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ky_cut</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">apo_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">40</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">legacy_steve</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.maptools.preprocess_fourier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Correct an enmap for the pixel window and filter in Fourier space.</p>
+<p>This function performs the typical map preprocessing that occurs in
+ACT map analysis. A CAR map has an anisotropic pixel window, which is
+easily corrected in Fourier space. It is convenient to combine this step
+with any filtering of Fourier modes that made be necessary while you have
+the Fourier-transformed maps, such as removing horizontal noise modes.</p>
+<p>If you specify map geometry information by passing <cite>shape</cite> and <cite>wcs</cite>,
+the map will be extracted to that geometry <em>before</em> applying the Fourier
+transform. In order to avoid ringing at the map edges, it’s useful to
+generate a rectangular taper, which is done in this function according to
+this specified shape and WCS information. If these are not specified, it
+is assumed that the full map will be used as the region for power spectrum
+calculation, and the taper will be constructed at the edges of the full
+map inwards. The taper width is specified by <cite>apo_width</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target_enmap</strong> (<em>enmap</em>) – The enmap to be modified</p></li>
+<li><p><strong>shape</strong> (<em>[</em><em>tuple of ints</em><em>]</em><em>, </em><em>optional</em>) – extraction map shape, by default None</p></li>
+<li><p><strong>wcs</strong> (<em>astropy.wcs</em><em>, </em><em>optional</em>) – extraction map WCS information, by default None</p></li>
+<li><p><strong>unpixwin</strong> (<em>bool</em><em>, </em><em>optional</em>) – Correct for the CAR pixel window if True, by default True</p></li>
+<li><p><strong>kx_cut</strong> (<em>int</em><em>, </em><em>optional</em>) – We cut modes with wavenumber: math: <cite>| k_x | &lt; k_x ^ {mathrm{cut}}</cite>,
+by default 90</p></li>
+<li><p><strong>ky_cut</strong> (<em>int</em><em>, </em><em>optional</em>) – We cut modes with wavenumber: math: <cite>| k_y | &lt; k_y ^ {mathrm{cut}}</cite>,
+by default 50</p></li>
+<li><p><strong>apo_width</strong> (<em>int</em><em>, </em><em>optional</em>) – width of the rectangular taper for the apodized mask, by default 40</p></li>
+<li><p><strong>legacy_steve</strong> (<em>bool</em><em>, </em><em>optional</em>) – Use a slightly different filter if True, to reproduce Steve’s pipeline.
+Steve’s k-space filter as of June 2019 had a bug where two k-space
+modes (the most positive cut mode in x and most negative cut mode in y)
+were not cut. This has a very small effect on the spectrum, but for
+reproducibility purposes we offer this behavior. By default False</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the final processed map</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>enmap</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.maptools.rectangular_apodization">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.maptools.</span></span><span class="sig-name descname"><span class="pre">rectangular_apodization</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wcs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">N_cut</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.maptools.rectangular_apodization" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a tapered mask at the edges of the box.</p>
+<p>Maps of actual data are unlikely to be periodic, which will induce
+ringing when one applies a k-space filter. To solve this, we taper the
+edges of the map to zero prior to filtering. This taper was written to
+match the output of Steve’s power spectrum pipeline, for reproducibility.</p>
+<p>See <a class="reference internal" href="#nawrapper.maptools.kfilter_map" title="nawrapper.maptools.kfilter_map"><code class="xref py py-func docutils literal notranslate"><span class="pre">nawrapper.maptools.kfilter_map()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>shape</strong> (<em>tuple of ints</em>) – Shape of the map to be tapered.</p></li>
+<li><p><strong>wcs</strong> (<em>astropy wcs object</em>) – WCS information for the map</p></li>
+<li><p><strong>width</strong> (<em>float</em>) – width of the taper</p></li>
+<li><p><strong>N_cut</strong> (<em>int</em>) – number of pixels to set to zero at the edges of the map</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>apo</strong> – A smooth mask that is one in the center and tapers to zero at the
+edges.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>enmap</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.maptools.sub_mono_di">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.maptools.</span></span><span class="sig-name descname"><span class="pre">sub_mono_di</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">map_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nside</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_dipole</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.maptools.sub_mono_di" title="Permalink to this definition">¶</a></dt>
+<dd><p>Subtract monopole and dipole from a healpix map.</p>
+</dd></dl>
+
+</section>
+<section id="module-nawrapper.planck">
+<span id="nawrapper-planck-module"></span><h2>nawrapper.planck module<a class="headerlink" href="#module-nawrapper.planck" title="Permalink to this headline">¶</a></h2>
+<p>Utility functions for processing Planck maps into spectra.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="nawrapper.planck.PlanckCov">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">nawrapper.planck.</span></span><span class="sig-name descname"><span class="pre">PlanckCov</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ellspath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">covpath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'covmat.dat'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clpath</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'data_extracted.dat'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.planck.PlanckCov" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.planck.PlanckCov.get_spec">
+<span class="sig-name descname"><span class="pre">get_spec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.planck.PlanckCov.get_spec" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.planck.PlanckCov.get_subcov">
+<span class="sig-name descname"><span class="pre">get_subcov</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spec2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.planck.PlanckCov.get_subcov" title="Permalink to this definition">¶</a></dt>
+<dd><p>spec: {TT, TE, or EE},  {‘100x100’, ‘143x143’, ‘143x217’, ‘217x217’}
+cross: string, i.e.</p>
+<dl class="simple">
+<dt>returns tuple:</dt><dd><p>ells, cl, subcovariance matrix</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.planck.get_half_mission_namap">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.planck.</span></span><span class="sig-name descname"><span class="pre">get_half_mission_namap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">freq1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beam_dir</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.planck.get_half_mission_namap" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.planck.get_planck_total_spectrum">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.planck.</span></span><span class="sig-name descname"><span class="pre">get_planck_total_spectrum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">theory_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">foreground_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lmax</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.planck.get_planck_total_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.planck.load_planck_half_missions">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.planck.</span></span><span class="sig-name descname"><span class="pre">load_planck_half_missions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">map_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beam_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'143'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'143'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'2'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.planck.load_planck_half_missions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.planck.preprocess_maps">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.planck.</span></span><span class="sig-name descname"><span class="pre">preprocess_maps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">maps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masks</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">missing_pixel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pol_eff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nside</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.planck.preprocess_maps" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-nawrapper.power">
+<span id="nawrapper-power-module"></span><h2>nawrapper.power module<a class="headerlink" href="#module-nawrapper.power" title="Permalink to this headline">¶</a></h2>
+<p>Power spectrum objects and utilities.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="nawrapper.power.abstract_namap">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">abstract_namap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">maps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beams</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unpixwin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.abstract_namap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Object for organizing map products.</p>
+<p>Generic abstract</p>
+<p>Objects which inherit from this will organize the various ingredients
+that are required for a map to be used in power spectra analysis.
+Each map has an associated</p>
+<ol class="arabic simple">
+<li><p>IQU maps</p></li>
+<li><p>mask, referring to the product of hits, point source mask, etc.</p></li>
+<li><p>beam transfer function</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>maps</strong> (<em>ndarray</em><em> or </em><em>tuple</em>) – The maps you want to operate on. This needs to be a tuple of
+length 3, or an array of length <cite>(3,) + map.shape</cite>.</p></li>
+<li><p><strong>masks</strong> (<em>ndarray</em><em> or </em><em>tuple</em>) – The masks you want to operate on.</p></li>
+<li><p><strong>beams</strong> (<em>list</em><em> or </em><em>tuple</em>) – The beams you want to use.</p></li>
+<li><p><strong>unpixwin</strong> (<em>bool</em>) – If true, we account for the pixel window function when computing
+power spectra. For healpix this is accomplished by modifying the
+beam in-place.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – Print various information about what is being assumed. You should
+probably enable this the first time you try to run a particular
+scenario, but you can set this to false if you find it’s annoying
+to have it printing so much stuff, like if you are computing many
+spectra in a loop.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.power.abstract_namap.set_beam">
+<span class="sig-name descname"><span class="pre">set_beam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">apply_healpix_window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.abstract_namap.set_beam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set and extend the object’s beam up to lmax.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.power.bin_spec_dict">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">bin_spec_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Cb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">binleft</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">binright</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lmax</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.bin_spec_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bin an unbinned spectra dictionary with a specified l^2 binning.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.power.compute_spectra">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">compute_spectra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">namap1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">namap2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.compute_spectra" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute all of the spectra between two maps.</p>
+<p>This computes all cross spectra between two
+<a class="reference internal" href="#nawrapper.power.abstract_namap" title="nawrapper.power.abstract_namap"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.abstract_namap</span></code></a>
+for which there is information. For example, TE spectra will be computed
+only if the first map has a temperature map, and the second has a
+polarization map.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>namap1</strong> (<a class="reference internal" href="#nawrapper.power.namap_hp" title="nawrapper.power.namap_hp"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.namap_hp</span></code></a> or) – <code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.ps.namap_car</span></code>.
+The first map to compute correlations with.</p></li>
+<li><p><strong>namap2</strong> (<a class="reference internal" href="#nawrapper.power.namap_hp" title="nawrapper.power.namap_hp"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.namap_hp</span></code></a> or) – <code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.ps.namap_car</span></code>.
+To be correlated with <cite>namap1</cite>.</p></li>
+<li><p><strong>bins</strong> (<em>NaMaster NmtBin object</em><em> (</em><em>optional</em><em>)</em>) – At least one of <cite>bins</cite> or <cite>mc</cite> must be specified. If you specify
+<cite>bins</cite> (possibly from the output of
+<a class="reference internal" href="#nawrapper.power.read_bins" title="nawrapper.power.read_bins"><code class="xref py py-func docutils literal notranslate"><span class="pre">nawrapper.power.read_bins()</span></code></a>)
+then a new mode coupling matrix will be computed within this function
+call. If you have already computed a relevant mode-coupling matrix,
+then pass <cite>mc</cite> instead.</p></li>
+<li><p><strong>mc</strong> (<a class="reference internal" href="#nawrapper.power.mode_coupling" title="nawrapper.power.mode_coupling"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.mode_coupling</span></code></a> object (optional)) – This object contains precomputed mode-coupling matrices.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>Cb</strong> – Binned spectra, with the relevant cross spectra (i.e. ‘TT’, ‘TE’, ‘EE’)
+as dictionary keys. This also contains the bin centers as key ‘ell’.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.power.create_binning">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">create_binning</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lmax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">widths</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.create_binning" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a nabin object conveniently.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.power.mkdir_p">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">mkdir_p</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.mkdir_p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a directory and its parents.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="nawrapper.power.mode_coupling">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">mode_coupling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">namap1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">namap2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mcm_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.mode_coupling" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Wrapper around the NaMaster workspace object.</p>
+<p>This object contains the computationally intensive parts of mode coupling.
+It stores <cite>w00</cite>, the (spin-0, spin-0) mode coupling matrix, and optionally
+<cite>w02</cite>, <cite>w20</cite>, and <cite>w22</cite>, the (spin-0, spin-2), (spin-2, spin-0) and
+(spin-2, spin-2) mode coupling matrices if both maps have polarization
+data.</p>
+<p>Create a <cite>mode_coupling</cite> object.</p>
+<dl class="simple">
+<dt>namap1: namap</dt><dd><p>We use the mask in this namap to compute the mode-coupling
+matrices.</p>
+</dd>
+<dt>namap2: namap</dt><dd><p>We use the mask in this namap to compute the mode-coupling
+matrices.</p>
+</dd>
+<dt>bins: pymaster NmtBin object</dt><dd><p>We generate binned mode coupling matrices with this NaMaster
+binning
+object.</p>
+</dd>
+<dt>mcm_dir: string</dt><dd><p>Specify a directory which contains the workspace files for this
+mode-coupling object.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.power.mode_coupling.compute_master">
+<span class="sig-name descname"><span class="pre">compute_master</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f_a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f_b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wsp</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.mode_coupling.compute_master" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute mode-coupling-corrected spectra.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>f_a</strong> (<em>NmtField</em>) – First field to correlate.</p></li>
+<li><p><strong>f_b</strong> (<em>NmtField</em>) – Second field to correlate.</p></li>
+<li><p><strong>wsp</strong> (<em>NmtWorkspace</em>) – Workspace containing the mode coupling matrix and binning.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Contains the TT spectrum if correlating two spin-0 maps, or
+the TE/TB or EE/EB spectra if working with (spin-0, spin-2)
+and (spin-2, spin-2) maps respectively.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>numpy array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.power.mode_coupling.load_from_dir">
+<span class="sig-name descname"><span class="pre">load_from_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mcm_dir</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.mode_coupling.load_from_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read information from a nawrapper mode coupling directory.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="nawrapper.power.mode_coupling.write_to_dir">
+<span class="sig-name descname"><span class="pre">write_to_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mcm_dir</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.mode_coupling.write_to_dir" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="nawrapper.power.nabin">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">nabin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lmax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bpws</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ells</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlb</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_Dell</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f_ell</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.nabin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pymaster.bins.NmtBin</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="nawrapper.power.namap_car">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">namap_car</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">maps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beams</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_wcs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">purify_e</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">purify_b</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lmax_sht</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.namap_car" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#nawrapper.power.abstract_namap" title="nawrapper.power.abstract_namap"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.abstract_namap</span></code></a></p>
+<p>Map container for CAR pixellization</p>
+<p>Generate a CAR map container</p>
+<p>This bundles CAR pixelization map products, in particular</p>
+<ol class="arabic simple">
+<li><p>IQU maps</p></li>
+<li><p>mask, referring to the product of hits, point source mask, etc.</p></li>
+<li><p>beam transfer function</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>maps</strong> (<em>ndarray</em><em> or </em><em>tuple</em>) – The maps you want to operate on. This needs to be a tuple of
+length 3, or an array of length <cite>(3,) + map.shape</cite>.</p></li>
+<li><p><strong>masks</strong> (<em>ndarray</em><em> or </em><em>tuple</em>) – The masks you want to operate on.</p></li>
+<li><p><strong>beams</strong> (<em>list</em><em> or </em><em>tuple</em>) – The beams you want to use.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – Print various information about what is being assumed. You should
+probably enable this the first time you try to run a particular
+scenario, but you can set this to false if you find it’s annoying
+to have it printing so much stuff, like if you are computing many
+spectra in a loop.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="nawrapper.power.namap_hp">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">namap_hp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">maps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beams</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unpixwin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">purify_e</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">purify_b</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.namap_hp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#nawrapper.power.abstract_namap" title="nawrapper.power.abstract_namap"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.abstract_namap</span></code></a></p>
+<p>Generate a healpix map container</p>
+<p>This bundles healpix pixelization map products, in particular</p>
+<ol class="arabic simple">
+<li><p>IQU maps</p></li>
+<li><p>mask, referring to the product of hits, point source mask, etc.</p></li>
+<li><p>beam transfer function</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>maps</strong> (<em>ndarray</em><em> or </em><em>tuple</em>) – The maps you want to operate on. This needs to be a tuple of
+length 3, or an array of length <cite>(3,) + map.shape</cite>.</p></li>
+<li><p><strong>masks</strong> (<em>ndarray</em><em> or </em><em>tuple</em>) – The masks you want to operate on.</p></li>
+<li><p><strong>beams</strong> (<em>list</em><em> or </em><em>tuple</em>) – The beams you want to use.</p></li>
+<li><p><strong>unpixwin</strong> (<em>bool</em>) – If true, we account for the pixel window function when computing
+power spectra. For healpix this is accomplished by modifying the
+beam in-place.</p></li>
+<li><p><strong>n_iter</strong> (<em>int</em>) – Number of spherical harmonic iterations, because healpix is not
+a very good pixellization.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – Print various information about what is being assumed. You should
+probably enable this the first time you try to run a particular
+scenario, but you can set this to false if you find it’s annoying
+to have it printing so much stuff, like if you are computing many
+spectra in a loop.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.power.read_beam">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">read_beam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">beam_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.read_beam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read a beam file from disk.</p>
+<p>This function will interpolate a beam file with columns
+<span class="math notranslate nohighlight">\(\ell, B_{\ell}\)</span> to a 1D array where index corresponds to
+<span class="math notranslate nohighlight">\(\ell\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>beam_file</strong> (<em>str</em>) – The filename of the beam</p></li>
+<li><p><strong>multiply_healpix_window</strong> (<em>bool</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Contains the beam <span class="math notranslate nohighlight">\(B_{\ell}\)</span> where index <cite>i</cite> corresponds to
+multipole <cite>i</cite> (i.e. this array starts at ell = 0).</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>numpy array (float)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.power.read_bins">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">read_bins</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7925</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_Dell</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.read_bins" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read bins from an ASCII file and create a NmtBin object.</p>
+<p>This is a utility function to read ACT binning files and create a
+NaMaster NmtBin object. The file format consists of three columns: the
+left bin edge (int), the right bin edge (int), and the bin center (float).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file</strong> (<em>str</em>) – Filename of the binning to read.</p></li>
+<li><p><strong>lmax</strong> (<em>int</em>) – Maximum ell to create bins to.</p></li>
+<li><p><strong>is_Dell</strong> (<em>bool</em>) – Will generate <span class="math notranslate nohighlight">\(D_{\ell} = \ell (\ell + 1) C_{\ell} / (2 \pi)\)</span>
+if True, instead of <span class="math notranslate nohighlight">\(C_{\ell}\)</span>. This may cause order 1% effects
+due to weighting inside bins.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>b</strong> – Returns a NaMaster binning object.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pymaster.NmtBin</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.power.util_bin_FFT_CAR">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">util_bin_FFT_CAR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">map1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beam1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beam2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8000</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.util_bin_FFT_CAR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the FFTs, multiply, bin</p>
+<p>Beams are multiplied at bin centers. This is the worst
+job you could do for calculating power spectra.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="nawrapper.power.util_bin_FFTspec_CAR">
+<span class="sig-prename descclassname"><span class="pre">nawrapper.power.</span></span><span class="sig-name descname"><span class="pre">util_bin_FFTspec_CAR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">modlmap</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bin_edges</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#nawrapper.power.util_bin_FFTspec_CAR" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-nawrapper">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-nawrapper" title="Permalink to this headline">¶</a></h2>
+<p>Package init file.</p>
+<p>We want the user to get everything right away upon <cite>import nawrapper as nw</cite>.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">NaWrapper</a></h1>
+
+
+
+<p class="blurb">wrapper for easy CAR spectra</p>
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/covmat.html">Covariance Matrix</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/examples.html">Realistic Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">nawrapper</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">nawrapper package</a></li>
+</ul>
+</li>
+</ul>
+
+
+<hr />
+<ul>
+    
+    <li class="toctree-l1"><a href="https://github.com/xzackli/nawrapper">GitHub</a></li>
+    
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">nawrapper</a><ul>
+      <li>Previous: <a href="modules.html" title="previous chapter">nawrapper</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Zack Li.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/nawrapper.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,261 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Getting Started &#8212; NaWrapper 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Covariance Matrix" href="covmat.html" />
+    <link rel="prev" title="Installation" href="installation.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="getting-started">
+<span id="quickstart"></span><h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
+<p>In this example, we generate some fake spectra plagued by bright point
+sources. We then mask those sources and generate spectra which have been
+corrected for the mode coupling induced by our mask.</p>
+<p>We start by importing our libraries.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pymaster</span> <span class="k">as</span> <span class="nn">nmt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">pixell</span> <span class="kn">import</span> <span class="n">enmap</span><span class="p">,</span> <span class="n">enplot</span>
+
+<span class="kn">import</span> <span class="nn">nawrapper</span> <span class="k">as</span> <span class="nn">nw</span>
+<span class="kn">import</span> <span class="nn">nawrapper.maptools</span> <span class="k">as</span> <span class="nn">maptools</span>
+</pre></div>
+</div>
+<p>Let’s generate a random map to try doing analysis on. Next, we generate
+a random map realization for the spectrum
+<span class="math notranslate nohighlight">\(C_{\ell} = \ell^{-2.5}\)</span>. We’ll use a 2 arcminute pixel to make
+this fast.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">shape</span><span class="p">,</span><span class="n">wcs</span> <span class="o">=</span> <span class="n">enmap</span><span class="o">.</span><span class="n">geometry</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span><span class="mi">1024</span><span class="p">),</span>
+                           <span class="n">res</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="mi">2</span><span class="o">/</span><span class="mf">60.</span><span class="p">),</span><span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+<span class="n">ells</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2000</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ells</span><span class="p">))</span>
+<span class="n">ps</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="n">ells</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span><span class="o">**</span><span class="mf">2.5</span> <span class="c1"># don&#39;t want monopole/dipole</span>
+<span class="n">imap</span> <span class="o">=</span> <span class="n">enmap</span><span class="o">.</span><span class="n">rand_map</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span><span class="n">wcs</span><span class="p">,</span><span class="n">ps</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">imap</span><span class="p">)</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="../_images/getting_started_4_1.png"><img alt="../_images/getting_started_4_1.png" src="../_images/getting_started_4_1.png" style="width: 285px; height: 257px;" /></a>
+<p>Next, let’s generate a point source map. We’ll add these sources to the
+map, and apodize to generate a mask.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mask</span> <span class="o">=</span> <span class="n">enmap</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">imap</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">imap</span><span class="o">.</span><span class="n">wcs</span><span class="p">)</span>
+
+<span class="n">N_point_sources</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_point_sources</span><span class="p">):</span>
+    <span class="n">mask</span><span class="p">[</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">point_source_map</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">maptools</span><span class="o">.</span><span class="n">apod_C2</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+<span class="n">imap</span> <span class="o">+=</span> <span class="n">point_source_map</span>
+<span class="n">mask</span> <span class="o">=</span> <span class="n">maptools</span><span class="o">.</span><span class="n">apod_C2</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">20</span><span class="p">))</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">imap</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Map with Point Sources&#39;</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Point Source Mask&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="../_images/getting_started_6_0.png"><img alt="../_images/getting_started_6_0.png" src="../_images/getting_started_6_0.png" style="width: 712px; height: 347px;" /></a>
+<p>For additional realism we generate noise power spectra to add to our
+“splits”.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ells</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">ps</span><span class="p">),</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">nl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ells</span><span class="p">))</span> <span class="o">*</span> <span class="mf">1e-7</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ps</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;signal&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">nl</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;noise&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">yscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;Power Spectrum $C_{\ell}$&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;Multipole $\ell$&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="../_images/getting_started_8_1.png"><img alt="../_images/getting_started_8_1.png" src="../_images/getting_started_8_1.png" style="width: 413px; height: 277px;" /></a>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">noise_map_1</span> <span class="o">=</span> <span class="n">enmap</span><span class="o">.</span><span class="n">rand_map</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">wcs</span><span class="p">,</span>
+                             <span class="n">nl</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+<span class="n">noise_map_2</span> <span class="o">=</span> <span class="n">enmap</span><span class="o">.</span><span class="n">rand_map</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">wcs</span><span class="p">,</span>
+                             <span class="n">nl</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>For this example, we won’t include a beam. Now we set up the
+<a class="reference internal" href="../nawrapper.html#nawrapper.power.namap_car" title="nawrapper.power.namap_car"><code class="xref py py-class docutils literal notranslate"><span class="pre">nawrapper.power.namap_car</span></code></a> objects, using as input our our original random
+realization summed with the noise realizations.</p>
+<section id="the-power-spectrum-part">
+<h2>The Power Spectrum Part<a class="headerlink" href="#the-power-spectrum-part" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">namap_1</span> <span class="o">=</span> <span class="n">nw</span><span class="o">.</span><span class="n">namap_car</span><span class="p">(</span><span class="n">maps</span><span class="o">=</span><span class="p">(</span><span class="n">imap</span> <span class="o">+</span> <span class="n">noise_map_1</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="n">masks</span><span class="o">=</span><span class="n">mask</span><span class="p">)</span>
+<span class="n">namap_2</span> <span class="o">=</span> <span class="n">nw</span><span class="o">.</span><span class="n">namap_car</span><span class="p">(</span><span class="n">maps</span><span class="o">=</span><span class="p">(</span><span class="n">imap</span> <span class="o">+</span> <span class="n">noise_map_2</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="n">masks</span><span class="o">=</span><span class="n">mask</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This will print some diagnostic information by default.
+.. parsed-literal:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Assuming</span> <span class="n">the</span> <span class="n">same</span> <span class="n">mask</span> <span class="k">for</span> <span class="n">both</span> <span class="n">I</span> <span class="ow">and</span> <span class="n">QU</span><span class="o">.</span>
+<span class="n">Creating</span> <span class="n">a</span> <span class="n">car</span> <span class="n">namap</span><span class="o">.</span> <span class="n">temperature</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="n">polarization</span><span class="p">:</span> <span class="kc">False</span>
+<span class="n">temperature</span> <span class="n">beam</span> <span class="ow">not</span> <span class="n">specified</span><span class="p">,</span> <span class="n">setting</span> <span class="n">temperature</span> <span class="n">beam</span> <span class="n">to</span> <span class="mf">1.</span>
+<span class="n">Applying</span> <span class="n">a</span> <span class="n">k</span><span class="o">-</span><span class="n">space</span> <span class="nb">filter</span> <span class="p">(</span><span class="n">kx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ky</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">apo</span><span class="o">=</span><span class="mi">40</span><span class="p">),</span> <span class="n">unpixwin</span><span class="p">:</span> <span class="kc">True</span>
+<span class="n">Computing</span> <span class="n">spherical</span> <span class="n">harmonics</span><span class="o">.</span>
+
+<span class="n">Assuming</span> <span class="n">the</span> <span class="n">same</span> <span class="n">mask</span> <span class="k">for</span> <span class="n">both</span> <span class="n">I</span> <span class="ow">and</span> <span class="n">QU</span><span class="o">.</span>
+<span class="n">Creating</span> <span class="n">a</span> <span class="n">car</span> <span class="n">namap</span><span class="o">.</span> <span class="n">temperature</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="n">polarization</span><span class="p">:</span> <span class="kc">False</span>
+<span class="n">temperature</span> <span class="n">beam</span> <span class="ow">not</span> <span class="n">specified</span><span class="p">,</span> <span class="n">setting</span> <span class="n">temperature</span> <span class="n">beam</span> <span class="n">to</span> <span class="mf">1.</span>
+<span class="n">Applying</span> <span class="n">a</span> <span class="n">k</span><span class="o">-</span><span class="n">space</span> <span class="nb">filter</span> <span class="p">(</span><span class="n">kx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ky</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">apo</span><span class="o">=</span><span class="mi">40</span><span class="p">),</span> <span class="n">unpixwin</span><span class="p">:</span> <span class="kc">True</span>
+<span class="n">Computing</span> <span class="n">spherical</span> <span class="n">harmonics</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>Now let’s compute the mode coupling matrix. First we need to set up a
+binning object. The easiest way to do this is <code class="docutils literal notranslate"><span class="pre">create_binning</span></code> from
+nawrapper, which takes a function for the weights and either a list of
+bin widths for <code class="docutils literal notranslate"><span class="pre">widths=</span></code> or an integer (in which case all bins will
+have the same width).</p>
+<p>You can load this from file (see <code class="docutils literal notranslate"><span class="pre">nw.read_bins</span></code>))</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 40 bins of width 50 and 50 bins of width 100</span>
+<span class="c1"># lmax cuts off the end bins, so nothing over 1000 is included</span>
+<span class="n">bins</span> <span class="o">=</span> <span class="n">nw</span><span class="o">.</span><span class="n">create_binning</span><span class="p">(</span><span class="n">lmax</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">lmin</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                         <span class="n">widths</span><span class="o">=</span><span class="p">[</span><span class="mi">50</span><span class="p">]</span><span class="o">*</span><span class="mi">40</span> <span class="o">+</span> <span class="p">[</span><span class="mi">100</span><span class="p">]</span><span class="o">*</span><span class="mi">50</span><span class="p">,</span>
+                         <span class="n">weight_function</span><span class="o">=</span><span class="p">(</span><span class="k">lambda</span> <span class="n">ell</span> <span class="p">:</span> <span class="n">ell</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>We associate a mode-coupling object with a directory. Here, we specify a
+relative path. The mode-coupling object will write the matrices to disk
+when it is done computing. Future runs will look at the specified path
+for precomputed mode-coupling matrices, and read them in if they exist.
+To recompute matrices, specify the argument <code class="docutils literal notranslate"><span class="pre">overwrite=True</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mc</span> <span class="o">=</span> <span class="n">nw</span><span class="o">.</span><span class="n">mode_coupling</span><span class="p">(</span><span class="n">namap_1</span><span class="p">,</span> <span class="n">namap_2</span><span class="p">,</span> <span class="n">bins</span><span class="p">,</span> <span class="n">mcm_dir</span><span class="o">=</span><span class="s1">&#39;./quickstart_mcm/&#39;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Computing</span> <span class="n">new</span> <span class="n">mode</span><span class="o">-</span><span class="n">coupling</span> <span class="n">matrices</span><span class="o">.</span>
+<span class="n">Saving</span> <span class="n">mode</span><span class="o">-</span><span class="n">coupling</span> <span class="n">matrices</span> <span class="n">to</span> <span class="o">./</span><span class="n">quickstart_mcm</span><span class="o">/</span>
+</pre></div>
+</div>
+<p>Finally, we can compute some spectra!</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">Cb</span> <span class="o">=</span> <span class="n">nw</span><span class="o">.</span><span class="n">compute_spectra</span><span class="p">(</span><span class="n">namap_1</span><span class="p">,</span> <span class="n">namap_2</span><span class="p">,</span> <span class="n">mc</span><span class="o">=</span><span class="n">mc</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">Cb</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">dict_keys</span><span class="p">([</span><span class="s1">&#39;TT&#39;</span><span class="p">,</span> <span class="s1">&#39;ell&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>Let’s plot it!</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ps</span><span class="p">,</span> <span class="s1">&#39;k-&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;input&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">Cb</span><span class="p">[</span><span class="s1">&#39;ell&#39;</span><span class="p">],</span> <span class="n">Cb</span><span class="p">[</span><span class="s1">&#39;TT&#39;</span><span class="p">],</span> <span class="s1">&#39;r.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;computed&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">yscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="../_images/getting_started_20_0.png"><img alt="../_images/getting_started_20_0.png" src="../_images/getting_started_20_0.png" style="width: 386px; height: 251px;" /></a>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">NaWrapper</a></h1>
+
+
+
+<p class="blurb">wrapper for easy CAR spectra</p>
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-power-spectrum-part">The Power Spectrum Part</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="covmat.html">Covariance Matrix</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Realistic Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">nawrapper</a></li>
+</ul>
+
+
+<hr />
+<ul>
+    
+    <li class="toctree-l1"><a href="https://github.com/xzackli/nawrapper">GitHub</a></li>
+    
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="installation.html" title="previous chapter">Installation</a></li>
+      <li>Next: <a href="covmat.html" title="next chapter">Covariance Matrix</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Zack Li.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/usage/quickstart.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
