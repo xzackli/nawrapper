@@ -65,5 +65,59 @@ def test_unbinned_bins():
     b = nw.create_binning(10)
     assert np.all(b.get_effective_ells() == np.arange(2,11).astype(float))
 
-    
-    
+
+def test_kwargs():
+
+    # HEALPix map resolution
+    nside = 256
+
+    # Let us first create a square mask:
+    msk = np.zeros(hp.nside2npix(nside))
+    th, ph = hp.pix2ang(nside, np.arange(hp.nside2npix(nside)))
+    ph[np.where(ph > np.pi)[0]] -= 2 * np.pi
+    msk[np.where((th < 2.63) & (th > 1.86) &
+                (ph > -np.pi / 4) & (ph < np.pi / 4))[0]] = 1.
+
+    # Now we apodize the mask. The pure-B formalism requires the mask to be
+    # differentiable along the edges. The 'C1' and 'C2' apodization types
+    # supported by mask_apodization achieve this.
+    msk_apo = nmt.mask_apodization(msk, 10.0, apotype='C1')
+
+    # Select a binning scheme
+    b = nmt.NmtBin.from_nside_linear(nside, 16)
+    leff = b.get_effective_ells()
+
+    # Read power spectrum and provide function to generate simulated skies
+    l, cltt, clee, clbb, clte = np.loadtxt('test/cls.txt', unpack=True)
+
+    mp_t, mp_q, mp_u = hp.synfast([cltt, clee, clbb, clte],
+        nside=nside, new=True, verbose=False)
+
+
+    # This creates a spin-2 field without purifying either E or B
+    f2_np = nmt.NmtField(msk_apo, [mp_q, mp_u])
+    # This creates a spin-2 field with both pure E and B.
+    f2_yp = nmt.NmtField(msk_apo, [mp_q, mp_u], purify_e=True, purify_b=True)
+
+    w_np = nmt.NmtWorkspace()
+    w_np.compute_coupling_matrix(f2_np, f2_np, b)
+    w_yp = nmt.NmtWorkspace()
+    w_yp.compute_coupling_matrix(f2_yp, f2_yp, b)
+
+    # This wraps up the two steps needed to compute the power spectrum
+    # once the workspace has been initialized
+    def compute_master(f_a, f_b, wsp):
+        cl_coupled = nmt.compute_coupled_cell(f_a, f_b)
+        cl_decoupled = wsp.decouple_cell(cl_coupled)
+        return cl_decoupled
+
+    cl_np = compute_master(f2_np, f2_np, w_np)
+    cl_yp = compute_master(f2_yp, f2_yp, w_yp)
+
+    namap_np = nw.namap_hp(maps=(mp_t, mp_q, mp_u), masks=msk_apo, unpixwin=False, verbose=True)
+    namap_yp = nw.namap_hp(maps=(mp_t, mp_q, mp_u), masks=msk_apo, unpixwin=False, purify_e=True, purify_b=True)
+    nw_cl_np = nw.compute_spectra(namap_np, namap_np, bins=b)
+    nw_cl_yp = nw.compute_spectra(namap_yp, namap_yp, bins=b)
+
+    assert np.all(cl_np[0] ==  nw_cl_np['EE'])
+    assert np.all(cl_yp[0] ==  nw_cl_yp['EE'])
