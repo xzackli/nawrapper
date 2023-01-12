@@ -30,6 +30,7 @@ class nacov:
         namap2,
         mc_11,
         mc_12,
+        mc_21,
         mc_22,
         signal=None,
         noise=None,
@@ -55,6 +56,7 @@ class nacov:
         self.lmax = mc_12.bins.lmax
         self.mc_11 = mc_11
         self.mc_12 = mc_12
+        self.mc_21 = mc_21
         self.mc_22 = mc_22
         self.lb = mc_12.lb
         self.namap1 = namap1
@@ -66,6 +68,7 @@ class nacov:
 
         self.Cl11 = power.compute_spectra(namap1, namap1, mc=mc_11)
         self.Cl12 = power.compute_spectra(namap1, namap2, mc=mc_12)
+        self.Cl21 = power.compute_spectra(namap2, namap1, mc=mc_21)
         self.Cl22 = power.compute_spectra(namap2, namap2, mc=mc_22)
 
         if signal is None:
@@ -92,14 +95,14 @@ class nacov:
             spec_list += ["ET"]
 
         l_theory = np.arange(self.lmax + 1)
-        Cl_dict = {"11": self.Cl11, "12": self.Cl12, "22": self.Cl22}
+        Cl_dict = {"11": self.Cl11, "12": self.Cl12, "21": self.Cl21, "22": self.Cl22}
 
 
         for XY in spec_list:
             X, Y = XY
 
             if self.different_signals:  # store everything in signal
-                for AB in ("11", "12", "22"):
+                for AB in ("11", "12", "21", "22"):
                     signal_id = X + AB[0] + Y + AB[1]
                     if signal_id not in self.signal:
                         if noise_smoothing_mode == "savgol":
@@ -114,6 +117,7 @@ class nacov:
                         elif noise_smoothing_mode == "poly":
                             raise NotImplementedError(
                                 "polynomial smoothing with differing signals")
+
                 
             else:  # default behavior: estimate signal and noise
                 if XY not in self.signal:
@@ -226,7 +230,8 @@ class nacov:
             return (
                 (self.signal[X + str(m1) + Y + str(m2)])
                 * self.beam[X + str(m1)]
-                * self.beam[Y + str(m2)])
+                * self.beam[Y + str(m2)]
+            )
 
         if self.cosmic_variance:
             return (
@@ -350,6 +355,7 @@ def compute_covmat(
     bins,
     mc_11=None,
     mc_12=None,
+    mc_21=None,
     mc_22=None,
     signal=None,
     noise=None,
@@ -384,6 +390,9 @@ def compute_covmat(
     mc_12 : :py:class:`nawrapper.power.mode_coupling` object (optional)
         This object contains precomputed mode-coupling matrices for the
         cross-spectrum between `namap1` and `namap2`.
+    mc_21: :py:class:`nawrapper.power.mode_coupling` object (optional)
+        This object contains precomputed mode-coupling matrices for the
+        cross-spectrum between `namap2` and `namap1`.
     mc_22 : :py:class:`nawrapper.power.mode_coupling` object (optional)
         This object contains precomputed mode-coupling matrices for the
         auto-spectrum of `namap2`.
@@ -399,13 +408,20 @@ def compute_covmat(
         Unspecified noise where `i == j` will be computed from the auto minus
         cross-spectra, and `i != j` will be set to zero.
 
-
     smoothing_window : int
         Savgol filter smoothing window, for smoothing the estimated
         signal and noise spectra.
     smoothing_polyorder : int
         Savgol filter polynomial order, for smoothing the estimated
         signal and noise spectra.
+    
+    cosmic_variance : bool
+        Flag to include the cosmic variance term in the covariance.
+        This option is set to True by default.
+    different_signals : bool
+        Set to True if the signal differs between the two maps. Set to
+        False by default.
+
 
     Returns
     -------
@@ -418,6 +434,8 @@ def compute_covmat(
         mc_11 = power.mode_coupling(namap1, namap1, bins=bins, verbose=False)
     if mc_12 is None:
         mc_12 = power.mode_coupling(namap1, namap2, bins=bins, verbose=False)
+    if mc_21 is None:
+        mc_21 = power.mode_coupling(namap2, namap1, bins=bins, verbose=False)
     if mc_22 is None:
         mc_22 = power.mode_coupling(namap2, namap2, bins=bins, verbose=False)
 
@@ -426,6 +444,7 @@ def compute_covmat(
         namap2,
         mc_11=mc_11,
         mc_12=mc_12,
+        mc_21=mc_21,
         mc_22=mc_22,
         signal=signal,
         noise=noise,
