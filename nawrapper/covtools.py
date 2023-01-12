@@ -37,6 +37,8 @@ class nacov:
         smoothing_window=11,
         smoothing_polyorder=3,
         cosmic_variance=True,
+        different_signals=False,
+        mc_21=None
     ):
         r"""
         Create a `nacov` object.
@@ -50,21 +52,32 @@ class nacov:
             We use the mask in this namap to compute the mode-coupling
             matrices.
 
+        If mc_21 is not specified, it is assumed to be equal to mc_12.
+
         """
         self.lmax = mc_12.bins.lmax
         self.mc_11 = mc_11
         self.mc_12 = mc_12
         self.mc_22 = mc_22
+
+        # if mc_21 is not specified, then assume it's the same as mc_12
+        if mc_21 is None:
+            self.mc_21 = mc_12
+        else:
+            self.mc_21 = mc_21
+
         self.lb = mc_12.lb
         self.namap1 = namap1
         self.namap2 = namap2
         self.bins = mc_12.bins
         self.num_ell = len(mc_12.bins.get_effective_ells())
         self.cosmic_variance = cosmic_variance
+        self.different_signals = different_signals
 
-        self.Cl11 = power.compute_spectra(namap1, namap1, mc=mc_11)
-        self.Cl12 = power.compute_spectra(namap1, namap2, mc=mc_12)
-        self.Cl22 = power.compute_spectra(namap2, namap2, mc=mc_22)
+        self.Cl11 = power.compute_spectra(namap1, namap1, mc=self.mc_11)
+        self.Cl12 = power.compute_spectra(namap1, namap2, mc=self.mc_12)
+        self.Cl21 = power.compute_spectra(namap2, namap1, mc=self.mc_21)
+        self.Cl22 = power.compute_spectra(namap2, namap2, mc=self.mc_22)
 
         if signal is None:
             self.signal = {}
@@ -90,53 +103,75 @@ class nacov:
             spec_list += ["ET"]
 
         l_theory = np.arange(self.lmax + 1)
+        Cl_dict = {"11": self.Cl11, "12": self.Cl12, "21": self.Cl21, "22": self.Cl22}
+
         for XY in spec_list:
             X, Y = XY
-            if XY not in self.signal:
-                # linear interpolation
-                self.signal[XY] = self.smooth_and_interpolate(
-                    l_theory,
-                    np.interp(l_theory, self.lb, self.Cl12[XY]),
-                    smoothing_window,
-                    smoothing_polyorder,
-                )
 
-            if (X + "1" + Y + "1") not in self.noise:
+            if self.different_signals:  # store everything in signal
+                for AB in ("11", "12", "21", "22"):
+                    signal_id = X + AB[0] + Y + AB[1]
+                    if signal_id not in self.signal:
+                        if noise_smoothing_mode == "savgol":
+                            self.signal[signal_id] = np.abs(
+                                self.smooth_and_interpolate(
+                                    l_theory,
+                                    np.interp(l_theory, self.lb, (Cl_dict[AB])[XY]),
+                                    smoothing_window,
+                                    smoothing_polyorder,
+                                )
+                            )
+                        elif noise_smoothing_mode == "poly":
+                            raise NotImplementedError(
+                                "polynomial smoothing with differing signals")
 
-                if noise_smoothing_mode == "savgol":
-                    self.noise[X + "1" + Y + "1"] = np.abs(
-                        self.smooth_and_interpolate(
-                            l_theory,
-                            np.interp(l_theory, self.lb, self.Cl11[XY]),
-                            smoothing_window,
-                            smoothing_polyorder,
+                
+            else:  # default behavior: estimate signal and noise
+                if XY not in self.signal:
+                    # linear interpolation
+                    self.signal[XY] = self.smooth_and_interpolate(
+                        l_theory,
+                        np.interp(l_theory, self.lb, self.Cl12[XY]),
+                        smoothing_window,
+                        smoothing_polyorder,
+                    )
+
+                if (X + "1" + Y + "1") not in self.noise:
+
+                    if noise_smoothing_mode == "savgol":
+                        self.noise[X + "1" + Y + "1"] = np.abs(
+                            self.smooth_and_interpolate(
+                                l_theory,
+                                np.interp(l_theory, self.lb, self.Cl11[XY]),
+                                smoothing_window,
+                                smoothing_polyorder,
+                            )
+                            - self.signal[XY]
                         )
-                        - self.signal[XY]
-                    )
-                elif noise_smoothing_mode == "poly":
-                    self.noise[X + "1" + Y + "1"] = self.get_smooth_noise(
-                        cb=self.Cl11[XY],
-                        signal=self.signal[XY],
-                        smoothing_polyorder=smoothing_polyorder,
-                    )
-
-            if (X + "2" + Y + "2") not in self.noise:
-                if noise_smoothing_mode == "savgol":
-                    self.noise[X + "2" + Y + "2"] = np.abs(
-                        self.smooth_and_interpolate(
-                            l_theory,
-                            np.interp(l_theory, self.lb, self.Cl22[XY]),
-                            smoothing_window,
-                            smoothing_polyorder,
+                    elif noise_smoothing_mode == "poly":
+                        self.noise[X + "1" + Y + "1"] = self.get_smooth_noise(
+                            cb=self.Cl11[XY],
+                            signal=self.signal[XY],
+                            smoothing_polyorder=smoothing_polyorder,
                         )
-                        - self.signal[XY]
-                    )
-                elif noise_smoothing_mode == "poly":
-                    self.noise[X + "2" + Y + "2"] = self.get_smooth_noise(
-                        cb=self.Cl22[XY],
-                        signal=self.signal[XY],
-                        smoothing_polyorder=smoothing_polyorder,
-                    )
+
+                if (X + "2" + Y + "2") not in self.noise:
+                    if noise_smoothing_mode == "savgol":
+                        self.noise[X + "2" + Y + "2"] = np.abs(
+                            self.smooth_and_interpolate(
+                                l_theory,
+                                np.interp(l_theory, self.lb, self.Cl22[XY]),
+                                smoothing_window,
+                                smoothing_polyorder,
+                            )
+                            - self.signal[XY]
+                        )
+                    elif noise_smoothing_mode == "poly":
+                        self.noise[X + "2" + Y + "2"] = self.get_smooth_noise(
+                            cb=self.Cl22[XY],
+                            signal=self.signal[XY],
+                            smoothing_polyorder=smoothing_polyorder,
+                        )
 
         # any signal or noise not specified is set to zero
         self.noise = defaultdict(lambda: np.zeros(self.lmax + 1), self.noise)
@@ -196,6 +231,15 @@ class nacov:
 
     def total_spec(self, XY, m1, m2):
         X, Y = XY
+
+        # if signals are different, then we don't use the noise dict
+        if self.different_signals:
+            return (
+                (self.signal[X + str(m1) + Y + str(m2)])
+                * self.beam[X + str(m1)]
+                * self.beam[Y + str(m2)]
+            )
+
         if self.cosmic_variance:
             return (
                 (self.signal[XY] + self.noise[X + str(m1) + Y + str(m2)])
@@ -318,12 +362,14 @@ def compute_covmat(
     bins,
     mc_11=None,
     mc_12=None,
+    mc_21=None,
     mc_22=None,
     signal=None,
     noise=None,
     smoothing_window=11,
     smoothing_polyorder=3,
     cosmic_variance=True,
+    different_signals=False,
     verbose=True,
 ):
     r"""Compute all of the relevant covariances between two namap.
@@ -351,6 +397,9 @@ def compute_covmat(
     mc_12 : :py:class:`nawrapper.power.mode_coupling` object (optional)
         This object contains precomputed mode-coupling matrices for the
         cross-spectrum between `namap1` and `namap2`.
+    mc_21: :py:class:`nawrapper.power.mode_coupling` object (optional)
+        This object contains precomputed mode-coupling matrices for the
+        cross-spectrum between `namap2` and `namap1`.
     mc_22 : :py:class:`nawrapper.power.mode_coupling` object (optional)
         This object contains precomputed mode-coupling matrices for the
         auto-spectrum of `namap2`.
@@ -366,13 +415,20 @@ def compute_covmat(
         Unspecified noise where `i == j` will be computed from the auto minus
         cross-spectra, and `i != j` will be set to zero.
 
-
     smoothing_window : int
         Savgol filter smoothing window, for smoothing the estimated
         signal and noise spectra.
     smoothing_polyorder : int
         Savgol filter polynomial order, for smoothing the estimated
         signal and noise spectra.
+    
+    cosmic_variance : bool
+        Flag to include the cosmic variance term in the covariance.
+        This option is set to True by default.
+    different_signals : bool
+        Set to True if the signal differs between the two maps. Set to
+        False by default.
+
 
     Returns
     -------
@@ -385,6 +441,8 @@ def compute_covmat(
         mc_11 = power.mode_coupling(namap1, namap1, bins=bins, verbose=False)
     if mc_12 is None:
         mc_12 = power.mode_coupling(namap1, namap2, bins=bins, verbose=False)
+    if mc_21 is None:
+        mc_21 = power.mode_coupling(namap2, namap1, bins=bins, verbose=False)
     if mc_22 is None:
         mc_22 = power.mode_coupling(namap2, namap2, bins=bins, verbose=False)
 
@@ -393,11 +451,14 @@ def compute_covmat(
         namap2,
         mc_11=mc_11,
         mc_12=mc_12,
+        mc_21=mc_21,
         mc_22=mc_22,
         signal=signal,
         noise=noise,
         smoothing_window=smoothing_window,
         smoothing_polyorder=smoothing_polyorder,
+        cosmic_variance=cosmic_variance,
+        different_signals=different_signals
     )
     my_cov.compute()
 
