@@ -38,7 +38,7 @@ def test_cov_TT():
 
     print('Computing mode coupling matrix.')
     mc = nw.mode_coupling(m1, m2, bins=nw.create_binning(lmax))
-    cov = nw.nacov(m1, m2, mc_11=mc, mc_12=mc, mc_21=mc, mc_22=mc)
+    cov = nw.nacov(m1, m2, mc_11=mc, mc_12=mc, mc_22=mc)
     cov.compute()
     
     # test the covariance

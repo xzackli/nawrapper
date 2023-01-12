@@ -30,7 +30,6 @@ class nacov:
         namap2,
         mc_11,
         mc_12,
-        mc_21,
         mc_22,
         signal=None,
         noise=None,
@@ -38,7 +37,8 @@ class nacov:
         smoothing_window=11,
         smoothing_polyorder=3,
         cosmic_variance=True,
-        different_signals=False
+        different_signals=False,
+        mc_21=None
     ):
         r"""
         Create a `nacov` object.
@@ -52,12 +52,20 @@ class nacov:
             We use the mask in this namap to compute the mode-coupling
             matrices.
 
+        If mc_21 is not specified, it is assumed to be equal to mc_12.
+
         """
         self.lmax = mc_12.bins.lmax
         self.mc_11 = mc_11
         self.mc_12 = mc_12
-        self.mc_21 = mc_21
         self.mc_22 = mc_22
+
+        # if mc_21 is not specified, then assume it's the same as mc_12
+        if mc_21 is None:
+            self.mc_21 = mc_12
+        else:
+            self.mc_21 = mc_21
+
         self.lb = mc_12.lb
         self.namap1 = namap1
         self.namap2 = namap2
@@ -66,10 +74,10 @@ class nacov:
         self.cosmic_variance = cosmic_variance
         self.different_signals = different_signals
 
-        self.Cl11 = power.compute_spectra(namap1, namap1, mc=mc_11)
-        self.Cl12 = power.compute_spectra(namap1, namap2, mc=mc_12)
-        self.Cl21 = power.compute_spectra(namap2, namap1, mc=mc_21)
-        self.Cl22 = power.compute_spectra(namap2, namap2, mc=mc_22)
+        self.Cl11 = power.compute_spectra(namap1, namap1, mc=self.mc_11)
+        self.Cl12 = power.compute_spectra(namap1, namap2, mc=self.mc_12)
+        self.Cl21 = power.compute_spectra(namap2, namap1, mc=self.mc_21)
+        self.Cl22 = power.compute_spectra(namap2, namap2, mc=self.mc_22)
 
         if signal is None:
             self.signal = {}
@@ -96,7 +104,6 @@ class nacov:
 
         l_theory = np.arange(self.lmax + 1)
         Cl_dict = {"11": self.Cl11, "12": self.Cl12, "21": self.Cl21, "22": self.Cl22}
-
 
         for XY in spec_list:
             X, Y = XY
