@@ -175,10 +175,6 @@ class namap_car(abstract_namap):
         verbose=True,
         sub_shape=None,
         sub_wcs=None,
-        purify_e=False,
-        purify_b=False,
-        n_iter=0, 
-        lmax_sht=-1, 
         **kwargs
     ):
         r"""Generate a CAR map container
@@ -188,6 +184,9 @@ class namap_car(abstract_namap):
         1. IQU maps
         2. mask, referring to the product of hits, point source mask, etc.
         3. beam transfer function
+
+        Any additional keyword arguments you pass to this will be passed to pymaster's
+        NmtField constructor.
 
         Parameters
         ----------
@@ -224,16 +223,15 @@ class namap_car(abstract_namap):
             print("Computing spherical harmonics.\n")
         # construct the a_lm of the maps
         if self.has_temp:
+            # remove E/B related kwargs from I map
+            spin0_ignore = ('purify_e', 'purify_b', 'n_iter_mask_purify')
+            spin0_kwargs = {x: kwargs[x] for x in kwargs if x not in spin0_ignore}
             self.field_spin0 = nmt.NmtField(
                 self.mask_temp,
                 [self.map_I],
                 beam=self.beam_temp,
                 wcs=self.wcs,
-                n_iter=n_iter,
-                purify_e=purify_e,
-                purify_b=purify_b,
-                lmax_sht=lmax_sht, 
-                **kwargs
+                **spin0_kwargs
             )
         if self.has_pol:
             self.field_spin2 = nmt.NmtField(
@@ -241,10 +239,6 @@ class namap_car(abstract_namap):
                 [self.map_Q, self.map_U],
                 beam=self.beam_pol,
                 wcs=self.wcs,
-                n_iter=n_iter,
-                purify_e=purify_e,
-                purify_b=purify_b,
-                lmax_sht=lmax_sht, 
                 **kwargs
             )
 
@@ -257,9 +251,6 @@ class namap_hp(abstract_namap):
         beams=None,
         unpixwin=True,
         verbose=True,
-        n_iter=3,
-        purify_e=False,
-        purify_b=False,
         **kwargs
     ):
         r"""Generate a healpix map container
@@ -307,7 +298,10 @@ class namap_hp(abstract_namap):
         self.set_beam(verbose=verbose)
         self.pixwin_temp, self.pixwin_pol = hp.sphtfunc.pixwin(
             self.nside, pol=True)
-        if verbose:
+        if unpixwin == False:
+            self.pixwin_temp.fill(1)
+            self.pixwin_pol.fill(1)
+        elif verbose:
             print("Including the healpix pixel window function.")
         if self.has_temp:
             self.pixwin_temp = self.pixwin_temp[: len(self.beam_temp)]
@@ -325,23 +319,20 @@ class namap_hp(abstract_namap):
         if verbose:
             print("Computing spherical harmonics.\n")
         if self.has_temp:
+            # remove E/B related kwargs from I map
+            spin0_ignore = ('purify_e', 'purify_b', 'n_iter_mask_purify')
+            spin0_kwargs = {x: kwargs[x] for x in kwargs if x not in spin0_ignore}
             self.field_spin0 = nmt.NmtField(
                 self.mask_temp,
                 [self.map_I],
                 beam=beam_temp,
-                n_iter=n_iter,
-                purify_e=purify_e,
-                purify_b=purify_b,
-                **kwargs
+                **spin0_kwargs
             )
         if self.has_pol:
             self.field_spin2 = nmt.NmtField(
                 self.mask_pol,
                 [self.map_Q, self.map_U],
                 beam=beam_pol,
-                n_iter=n_iter,
-                purify_e=purify_e,
-                purify_b=purify_b,
                 **kwargs
             )
 
